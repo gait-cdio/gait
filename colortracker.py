@@ -1,5 +1,7 @@
 import numpy as np
 import cv2
+import matplotlib.pyplot as plt
+plt.ioff()
 # import PyOpenPose
 
 
@@ -47,6 +49,9 @@ cv2.resizeWindow('Keypoints', 800,600)
 
 paused = False
 
+x_coords = []
+y_coords = []
+
 while (cap.isOpened()):
 
     ret, img = cap.read()
@@ -79,8 +84,13 @@ while (cap.isOpened()):
                                               cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
         keybuffer = np.append(keybuffer, np.array(keypoints))
         # print(type(keybuffer[0][0]))
-        print("Detected keypoints:", len(keypoints))
-        print_keypoint_positions(keybuffer)
+        num_keypoints = len(keypoints)
+        print("Detected keypoints:", num_keypoints)
+
+        if num_keypoints > 0:
+            x_coords.append(keypoints[num_keypoints - 1].pt[0])
+            y_coords.append(keypoints[num_keypoints - 1].pt[1])
+
         # Show keypoints
         cv2.imshow("Keypoints", im_with_keypoints)
         out.write(im_with_keypoints)
@@ -103,6 +113,12 @@ while (cap.isOpened()):
 cap.release()
 out.release()
 cv2.destroyAllWindows()
+
+plt.plot(x_coords, y_coords)
+plt.ylim(max(y_coords), min(y_coords)) # Reverse y axis because we have image coordinates
+plt.xlabel('x')
+plt.ylabel('y')
+plt.show()
 
 print('You did the thing :)')
 
