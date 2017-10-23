@@ -2,14 +2,16 @@ import numpy as np
 import cv2
 # import PyOpenPose
 
-def printKeyPointPositions(keypointList):
+
+def print_keypoint_positions(keypointList):
     i = 1
     for keyPoint in keypointList:
         x = keyPoint.pt[0]
         y = keyPoint.pt[1]
-        #print("KeyPoint nr:" + str(i) + "x:" + str(x) + "y:" + str(y) )
+        # print("KeyPoint nr:" + str(i) + "x:" + str(x) + "y:" + str(y) )
         i = i + 1
-    print("Number of blobs =" + str(i))
+    print("Number of blobs =", len(keypointList))
+
 
 cap = cv2.VideoCapture('4farger.mp4')
 width = int(cap.get(3))
@@ -28,13 +30,13 @@ blob_params.minRepeatability = 1
 blob_params.filterByCircularity = False
 blob_params.minCircularity = 0.5
 blob_params.filterByInertia = True
-blob_params.minInertiaRatio = 0.5
+blob_params.minInertiaRatio = 0.3
 blob_params.minDistBetweenBlobs = 500
 blob_params.filterByArea = True
 blob_params.minArea = 60
 blob_params.maxArea = 200
 blob_params.filterByConvexity = True
-blob_params.minConvexity = 0.8
+blob_params.minConvexity = 0.9
 blob_params.filterByColor = 0
 blob_params.blobColor = 100
 
@@ -42,6 +44,8 @@ detector = cv2.SimpleBlobDetector_create(blob_params)
 
 cv2.namedWindow('Keypoints',cv2.WINDOW_NORMAL)
 cv2.resizeWindow('Keypoints', 800,600)
+
+paused = False
 
 while (cap.isOpened()):
 
@@ -75,11 +79,21 @@ while (cap.isOpened()):
                                               cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
         keybuffer = np.append(keybuffer, np.array(keypoints))
         # print(type(keybuffer[0][0]))
-        printKeyPointPositions(keybuffer)
+        print("Detected keypoints:", len(keypoints))
+        print_keypoint_positions(keybuffer)
         # Show keypoints
         cv2.imshow("Keypoints", im_with_keypoints)
         out.write(im_with_keypoints)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+
+        if paused:
+            delay = 0
+        else:
+            delay = 1
+
+        pressed_key = cv2.waitKey(delay) & 0xFF
+        if pressed_key == ord(' '):
+            paused = not paused
+        elif pressed_key == ord('q'):
             break
     else:
         break
