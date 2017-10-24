@@ -15,6 +15,14 @@ def print_keypoint_positions(keypointList):
     print("Number of blobs =", len(keypointList))
 
 
+# Low scores if similar
+def simularityDistance(keypoint1, keypoint2, sizeweight):
+    x1, y1 = keypoint1.pt
+    x2, y2 = keypoint2.pt
+    d2 = (x1 - x2) ** 2 + (y1 - y2) ** 2
+    s2 = (keypoint1.size - keypoint2.size) ** 2
+    return d2 + s2 * sizeweight
+
 cap = cv2.VideoCapture('4farger.mp4')
 width = int(cap.get(3))
 height = int(cap.get(4))
@@ -49,8 +57,7 @@ cv2.resizeWindow('Keypoints', 800,600)
 
 paused = False
 
-x_coords = []
-y_coords = []
+keypoint_array = []
 
 while (cap.isOpened()):
 
@@ -88,8 +95,12 @@ while (cap.isOpened()):
         print("Detected keypoints:", num_keypoints)
 
         if num_keypoints > 0:
-            x_coords.append(keypoints[num_keypoints - 1].pt[0])
-            y_coords.append(keypoints[num_keypoints - 1].pt[1])
+            keypoint_array.append(keypoints[-1])
+            
+            
+
+
+
 
         # Show keypoints
         cv2.imshow("Keypoints", im_with_keypoints)
@@ -114,22 +125,34 @@ cap.release()
 out.release()
 cv2.destroyAllWindows()
 
+x_coords = [] 
+y_coords = []
+diff = []
+
+firstIter = True
+for kp in keypoint_array:
+    x_coords.append(kp.pt[0])
+    y_coords.append(kp.pt[1])
+    if (not firstIter):
+        diff.append(simularityDistance(kp, lastKeypoint,0))
+    firstIter = False
+    lastKeypoint = kp
+
+plt.figure(1)
 plt.plot(x_coords, y_coords)
 plt.ylim(max(y_coords), min(y_coords)) # Reverse y axis because we have image coordinates
 plt.xlabel('x')
 plt.ylabel('y')
 plt.show()
 
+plt.figure(2)
+plt.plot(diff)
+plt.ylim(max(diff), min(diff))
+plt.show()
+
 print('You did the thing :)')
 
 
-# Low scores if similar
-def simularityDistance(keypoint1, keypoint2, sizeweight):
-    x1, y1 = keypoint1.pt
-    x2, y2 = keypoint2.pt
-    d2 = (x1 - x2) ** 2 + (y1 - y2) ** 2
-    s2 = (keypoint1.size - keypoint2.size) ** 2
-    return d2 + s2 * sizeweight
 
 
 def simularityMatrix(keypoints1, keypoints2):
