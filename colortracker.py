@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
@@ -15,6 +17,27 @@ def print_keypoint_positions(keypointList):
     print("Number of blobs =", len(keypointList))
 
 
+def extract_median_circle(img, xpos, ypos, radius):
+    cir=np.zeros(img.shape,np.uint8)
+    cv2.circle(cir,center=(xpos,ypos),radius=radius,color=255,thickness=-1)
+    return np.median(img[(cir == 255)])
+
+
+# Low scores if similar
+def feature_distance(PointFeature1, PointFeature2, distanceweight=1, sizeweight=0, hueweight=0, timeweight=0):
+    x1, y1 = PointFeature1.position
+    x2, y2 = PointFeature2.position
+    d2 = (x1 - x2) ** 2 + (y1 - y2) ** 2
+    s2 = (PointFeature1.size - PointFeature2.size) ** 2
+    h = np.abs(PointFeature1.hue-PointFeature2.hue)
+    t = np.abs(PointFeature1.frame-PointFeature2.frame)
+    s = np.sqrt(s2)
+    d = np.sqrt(d2)
+    return d * distanceweight + s * sizeweight + h * hueweight + t * timeweight
+
+
+PointFeatures = namedtuple('PointFeatures', ['position', 'size', 'hue', 'frame'])
+
 cap = cv2.VideoCapture('4farger.mp4')
 width = int(cap.get(3))
 height = int(cap.get(4))
@@ -22,12 +45,12 @@ fps = cap.get(cv2.CAP_PROP_FPS)
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
 out = cv2.VideoWriter('4farger.avi', fourcc, fps, (width, height))
 counter = 0
-keybuffer = np.array([])
+pointbuffer = []
 
 blob_params = cv2.SimpleBlobDetector_Params()
 blob_params.minThreshold = 10
 blob_params.maxThreshold = 180
-blob_params.thresholdStep = 30
+blob_params.thresholdStep = 20
 blob_params.minRepeatability = 1
 blob_params.filterByCircularity = False
 blob_params.minCircularity = 0.5
@@ -46,9 +69,15 @@ detector = cv2.SimpleBlobDetector_create(blob_params)
 
 cv2.namedWindow('Keypoints',cv2.WINDOW_NORMAL)
 cv2.resizeWindow('Keypoints', 800,600)
+ret,img=cap.read()
+
+#huehue=extractMedianCircle(img[:,:,1],150,150,50)
+#print('test1: ',huehue)
+#print('test2: ',img[150,150,1])
 
 paused = False
 
+t_coords = []
 x_coords = []
 y_coords = []
 
@@ -59,7 +88,7 @@ while (cap.isOpened()):
         #img = cv2.resize(img, None, fx=0.7, fy=0.7, interpolation=cv2.INTER_CUBIC)
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
-        # h, s, v = cv2.split(hsv)
+        h, s, v = cv2.split(hsv)
         # h,s gets lot of sample nose at low/high intensities
         # vthresh = 40
         # ret2, th2 = cv2.threshold(v, vthresh, 255, cv2.THRESH_BINARY)
@@ -67,8 +96,8 @@ while (cap.isOpened()):
         # ret2, th2 = cv2.threshold(v, 255 - vthresh, 255, cv2.THRESH_BINARY_INV)
         # h = np.multiply(h, (th2 / 255).astype(np.uint8), dtype='uint8')
 
-        # define range of blue color in HSV
-        lower_pink = np.array([150, 50, 50])
+        # define range of pink color in HSV
+        lower_pink = np.array([130, 50, 50])
         upper_pink = np.array([180, 255, 255])
         # Threshold the HSV image to get only blue colors
         mask = cv2.inRange(hsv, lower_pink, upper_pink)
@@ -80,16 +109,31 @@ while (cap.isOpened()):
         keypoints = detector.detect(filtered)
         # Draw detected blobs as red circles.
         # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the circle corresponds to the size of blob
-        im_with_keypoints = cv2.drawKeypoints(filtered, keypoints, np.array([]), (0, 255, 0),
+        im_with_keypoints = cv2.drawKeypoints(img, keypoints, np.array([]), (0, 255, 0),
                                               cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        keybuffer = np.append(keybuffer, np.array(keypoints))
+
+        pointfeatures = list(map(lambda keypoint: PointFeatures(
+            position=keypoint.pt,
+            size=keypoint.size,
+            hue=float(h[int(keypoint.pt[1]), int(keypoint.pt[0])]),
+            frame=counter
+        ), keypoints))
+
+        pointbuffer.append(pointfeatures)
         # print(type(keybuffer[0][0]))
+
         num_keypoints = len(keypoints)
-        print("Detected keypoints:", num_keypoints)
+        #print("Detected keypoints (before filtering):", num_keypoints)
+
+        keypoints = list(filter(lambda keypoint: keypoint.pt[0] < 1600, keypoints))
+
+        num_keypoints = len(keypoints)
+        #print("Detected keypoints (after filtering):", num_keypoints)
 
         if num_keypoints > 0:
             x_coords.append(keypoints[num_keypoints - 1].pt[0])
             y_coords.append(keypoints[num_keypoints - 1].pt[1])
+            t_coords.append(counter)
 
         # Show keypoints
         cv2.imshow("Keypoints", im_with_keypoints)
@@ -114,23 +158,87 @@ cap.release()
 out.release()
 cv2.destroyAllWindows()
 
-plt.plot(x_coords, y_coords)
-plt.ylim(max(y_coords), min(y_coords)) # Reverse y axis because we have image coordinates
-plt.xlabel('x')
-plt.ylabel('y')
+# plt.plot(x_coords, y_coords)
+# plt.ylim(max(y_coords), min(y_coords))  # Reverse y axis because we have image coordinates
+# plt.xlabel('x')
+# plt.ylabel('y')
+# plt.show()
+#
+# plt.plot(t_coords, x_coords, t_coords, y_coords)
+# plt.xlabel('t')
+# plt.legend()
+# plt.show()
+
+pointString=[]
+similarity_threshold=100
+
+
+
+
+# Ugly pointmatching code...  I am sorry ;(
+# It is done frame by frame more or less.
+for frame_index in range(0, len(pointbuffer)):
+    # Current frame
+    pNext = pointbuffer[frame_index]
+    # Simularities between current frame and previous pointstrings
+
+
+    num_previous_points = len(pointString)
+    num_detections = len(pNext)
+    if num_detections == 0:
+        pass
+    # First detection of any points
+    elif num_previous_points == 0:
+        for point_index in range(0, num_detections):
+            newPointList = [pNext[point_index]]
+            pointString.append(newPointList)
+
+    # Comparing previous strings and current frame
+    else:
+        simMat = np.zeros((num_previous_points, num_detections))
+        for ix in range(0, num_previous_points):
+            for point_index in range(0, num_detections):
+                # Only distance at the moment ( 0,0,0 )
+                simMat[ix, point_index]=feature_distance(pointString[ix][-1], pNext[point_index], sizeweight=0, hueweight=4, timeweight=1)
+
+        while True:
+            try:
+                best_match_position = np.unravel_index(np.nanargmin(simMat), (num_previous_points, num_detections))
+            except ValueError:
+                break
+            previous_point_index, new_point_index = best_match_position
+
+            if simMat[best_match_position] < similarity_threshold:
+                pointString[previous_point_index].append(pNext[new_point_index])
+            else:
+                newPointString = [pNext[new_point_index]]
+                pointString.append(newPointString)
+
+            simMat[:, new_point_index] = np.nan
+            simMat[previous_point_index, :] = np.nan
+
+extract_position_square = lambda item: item.position[0] ** 2 + item.position[1] ** 2
+position_variances = [np.var(list(map(extract_position_square, s))) for s in pointString]
+plt.plot(np.log(position_variances), 'o')
 plt.show()
+
+#pointString = [s for s in pointString if len(s) > 10]
+
+f, axarr = plt.subplots(2, sharex=True)
+
+for index in range(0, len(pointString)):
+    curve = pointString[index]
+    t_c=[p.frame for p in curve]
+    x_c=[p.position[0] for p in curve]
+    y_c=[p.position[1] for p in curve]
+    xline = axarr[0].plot(t_c, x_c, 'o-', markersize=2, label='point {}'.format(index))
+    yline = axarr[1].plot(t_c, y_c, 'o-', markersize=2, label='point {}'.format(index))
+plt.xlabel('frame')
+#axarr[0].ylabel('x')
+#axarr[1].ylabel('y')
+plt.legend()
+plt.show()
+
 
 print('You did the thing :)')
 
-
-# Low scores if similar
-def simularityDistance(keypoint1, keypoint2, sizeweight):
-    x1, y1 = keypoint1.pt
-    x2, y2 = keypoint2.pt
-    d2 = (x1 - x2) ** 2 + (y1 - y2) ** 2
-    s2 = (keypoint1.size - keypoint2.size) ** 2
-    return d2 + s2 * sizeweight
-
-
-def simularityMatrix(keypoints1, keypoints2):
-    keypoints1.repmat()
