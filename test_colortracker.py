@@ -173,9 +173,9 @@ def extract_position_square(item):
     return item.position[0] ** 2 + item.position[1] ** 2
 
 
-position_variances = [np.var(list(map(extract_position_square, s))) for s in pointString]
-plt.plot(np.log(position_variances), 'o')
-plt.show()
+# position_variances = [np.var(list(map(extract_position_square, s))) for s in pointString]
+# plt.plot(np.log(position_variances), 'o')
+# plt.show()
 
 #pointString = [s for s in pointString if len(s) > 10]
 
@@ -189,6 +189,7 @@ for index in range(0, len(pointString)):
     xline = axes[0].plot(t_c, x_c, 'o-', markersize=2)
     yline = axes[1].plot(t_c, y_c, 'o-', markersize=2)
 
+axes[1].invert_yaxis()
 plt.show()
 
 
