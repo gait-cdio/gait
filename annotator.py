@@ -3,15 +3,15 @@ import cv2
 import matplotlib.pyplot as plt
 
 cap = cv2.VideoCapture('4farger.mp4')
-width = int(cap.get(3))
-height = int(cap.get(4))
+width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 fps = cap.get(cv2.CAP_PROP_FPS)
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
 out = cv2.VideoWriter('4farger.avi', fourcc, fps, (width, height))
 counter = 0
 
 cv2.namedWindow('Keypoints',cv2.WINDOW_NORMAL)
-cv2.resizeWindow('Keypoints', 800,600)
+#cv2.resizeWindow('Keypoints', 800,600)
 
 paused = True
 
