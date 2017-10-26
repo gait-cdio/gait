@@ -1,6 +1,9 @@
 import cv2
 import numpy as np
+from collections import namedtuple
 
+
+PointFeatures = namedtuple('PointFeatures', ['position', 'size', 'hue', 'frame'])
 
 def match_points(new_points, pointString, similarity_threshold):
     # Simularities between current frame and previous pointstrings
