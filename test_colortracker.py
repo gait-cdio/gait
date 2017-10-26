@@ -4,14 +4,16 @@ import numpy as np
 import os.path
 import sys
 
+from collections import namedtuple
+
 from colortracker import match_points, PointFeatures
 
 plt.ioff()
 # import PyOpenPose
 
+ColorInterval = namedtuple('ColorInterval', ['mean_hsv', 'variance'])
 
-
-videoname = '4farger'
+videoname = 'onefoot'
 cache_filename = videoname + '.detections.npy'
 
 if 'cached' in sys.argv and os.path.isfile(cache_filename):
@@ -36,7 +38,7 @@ else:
     blob_params.minCircularity = 0.5
     blob_params.filterByInertia = True
     blob_params.minInertiaRatio = 0.3
-    blob_params.minDistBetweenBlobs = 500
+    blob_params.minDistBetweenBlobs = 10
     blob_params.filterByArea = True
     blob_params.minArea = 60
     blob_params.maxArea = 50000
@@ -46,29 +48,52 @@ else:
     blob_params.blobColor = 100
 
     detector = cv2.SimpleBlobDetector_create(blob_params)
+    cap.set(cv2.CAP_PROP_POS_FRAMES, 100)
 
     ret,img=cap.read()
 
-    roi_rect = cv2.selectROI('Select color', img)
-    x, y, w, h = roi_rect
-    roi = img[y:(y+h),x:(x+w)]
-    cv2.destroyWindow('Select color')
+    cv2.namedWindow('Select color',cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('Select color', 1000,1000)
+    roi_rects = cv2.selectROIs('Select color', img)
+
+    rois_hsv = []
+    color_intervals = []
+
+    for roi_rect in roi_rects:
+        x, y, w, h = roi_rect
+        roi = img[y:(y+h),x:(x+w)]
+        roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+        goal_hsv = np.mean(roi_hsv, axis=(0, 1))
+        hsv_variance = np.var(roi_hsv, axis=(0, 1))
+
+        histl, binl = np.histogram(roi_hsv[:, :, 0])
+        hista, bina = np.histogram(roi_hsv[:, :, 1])
+        histb, binb = np.histogram(roi_hsv[:, :, 2])
+        figHandle, axisHandle = plt.subplots(ncols = 3)
+        axisHandle[0].plot(histl)
+        axisHandle[1].plot(hista)
+        axisHandle[2].plot(histb)
+        plt.show()
+
+        hsv_variance[0] *= 2
+
+        color_intervals.append(ColorInterval(mean_hsv=goal_hsv, variance=hsv_variance))
 
     cv2.namedWindow('Keypoints',cv2.WINDOW_NORMAL)
     cv2.resizeWindow('Keypoints', 800,600)
 
-    roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    cv2.destroyWindow('Select color')
 
-    goal_hsv = np.mean(roi_hsv, axis=(0, 1))
-    hsv_variance = np.var(roi_hsv, axis=(0, 1))
+    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
     out_of_bounds = False
 
-    if hsv_variance[0] < 1000:
-        hist, bin_edges = np.histogram(roi_hsv[:, :, 0],bins = 10,range=[0,180])
-        ind = np.argpartition(hist,-3)[-3:]
-        bin_starts = bin_edges[ind]
-        bin_ends = bin_edges[ind + 1]
-        out_of_bounds = True
+   # if hsv_variance[0] > 1000:
+   #     hist, bin_edges = np.histogram(roi_hsv[:, :, 0],bins = 10,range=[0,180])
+   #     ind = np.argpartition(hist,-2)[-2:]
+   #     bin_starts = bin_edges[ind]
+   #     bin_ends = bin_edges[ind + 1]
+   #     out_of_bounds = True
 
 
     #huehue=extractMedianCircle(img[:,:,1],150,150,50)
@@ -87,9 +112,14 @@ else:
         ret, img = cap.read()
         if ret == True:
             #img = cv2.resize(img, None, fx=0.7, fy=0.7, interpolation=cv2.INTER_CUBIC)
+            # hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            #
+            # h, s, v = cv2.split(hsv)
+
             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
             h, s, v = cv2.split(hsv)
+
             # h,s gets lot of sample nose at low/high intensities
             # vthresh = 40
             # ret2, th2 = cv2.threshold(v, vthresh, 255, cv2.THRESH_BINARY)
@@ -97,20 +127,23 @@ else:
             # ret2, th2 = cv2.threshold(v, 255 - vthresh, 255, cv2.THRESH_BINARY_INV)
             # h = np.multiply(h, (th2 / 255).astype(np.uint8), dtype='uint8')
 
-            lower_bound = np.array(goal_hsv - np.sqrt(hsv_variance))
-            upper_bound = np.array(np.clip(goal_hsv + np.sqrt(hsv_variance),[0,0,0],[180,255,255]))
+            #lower_bound = np.array(goal_hsv - np.sqrt(hsv_variance))
+            #upper_bound = np.array(np.clip(goal_hsv + np.sqrt(hsv_variance),[0,0,0],[180,255,255]))
 
-            mask = cv2.inRange(hsv, lower_bound, upper_bound)
-            if out_of_bounds:
-                mask = np.zeros(np.shape(hsv[:,:,0]),dtype='uint8')
-                for ind in range(0,len(bin_starts)):
-                    lower_bound = np.array([bin_starts[ind],50,50])
-                    upper_bound = np.array([bin_ends[ind],255,255])
+            #mask = cv2.inRange(hsv, lower_bound, upper_bound)
+            #if out_of_bounds:
+            mask = np.zeros(np.shape(hsv[:,:,0]),dtype='uint8')
+            for ind in range(0,len(color_intervals)):
+                #lower_bound = np.array([bin_starts[ind],50,50])
+                #upper_bound = np.array([bin_ends[ind],255,255])
 
-                    temp = cv2.inRange(hsv, lower_bound, upper_bound)
-                    #cv2.imshow("Keypoints", temp)
-                    #cv2.waitKey(0)
-                    mask = cv2.bitwise_or(temp, mask)
+                lower_bound = color_intervals[ind].mean_hsv - np.sqrt(color_intervals[ind].variance)
+                upper_bound = color_intervals[ind].mean_hsv + np.sqrt(color_intervals[ind].variance)
+
+                temp = cv2.inRange(hsv, lower_bound, upper_bound)
+                #cv2.imshow("Keypoints", temp)
+                #cv2.waitKey(0)
+                mask = cv2.bitwise_or(temp, mask)
                     #cv2.imshow("Keypoints", mask)
                     #cv2.waitKey(0)
 
@@ -118,10 +151,10 @@ else:
             res = cv2.bitwise_and(img, img, mask=mask)
 
             filtered = cv2.GaussianBlur(res, (15, 15), 1)
-            keypoints = detector.detect(filtered)
+            keypoints = detector.detect(res)
             # Draw detected blobs as red circles.
-            # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the circle corresponds to the size of blob
-            im_with_keypoints = cv2.drawKeypoints(filtered, keypoints, np.array([]), (0, 255, 0),
+            # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the qcircle corresponds to the size of blob
+            im_with_keypoints = cv2.drawKeypoints(res, keypoints, np.array([]), (0, 255, 0),
                                                   cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
             pointfeatures = list(map(lambda keypoint: PointFeatures(
