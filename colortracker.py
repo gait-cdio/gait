@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 plt.ioff()
 # import PyOpenPose
 
-
 def print_keypoint_positions(keypointList):
     i = 1
     for keyPoint in keypointList:
@@ -16,12 +15,10 @@ def print_keypoint_positions(keypointList):
         i = i + 1
     print("Number of blobs =", len(keypointList))
 
-
 def extract_median_circle(img, xpos, ypos, radius):
     cir=np.zeros(img.shape,np.uint8)
     cv2.circle(cir,center=(xpos,ypos),radius=radius,color=255,thickness=-1)
     return np.median(img[(cir == 255)])
-
 
 # Low scores if similar
 def feature_distance(PointFeature1, PointFeature2, distanceweight=1, sizeweight=0, hueweight=0, timeweight=0):
@@ -35,15 +32,26 @@ def feature_distance(PointFeature1, PointFeature2, distanceweight=1, sizeweight=
     d = np.sqrt(d2)
     return d * distanceweight + s * sizeweight + h * hueweight + t * timeweight
 
+clicked_position = None
+
+def clickForColor(event, x, y, flags, param):
+    global clicked_position
+    if event == cv2.EVENT_LBUTTONDOWN:
+        print('Clicked ', x, y)
+        clicked_position = (x, y)
+
+
 
 PointFeatures = namedtuple('PointFeatures', ['position', 'size', 'hue', 'frame'])
 
-cap = cv2.VideoCapture('4farger.mp4')
+videoname = 'pinkdot'
+cap = cv2.VideoCapture(videoname + '.mp4')
+
 width = int(cap.get(3))
 height = int(cap.get(4))
 fps = cap.get(cv2.CAP_PROP_FPS)
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
-out = cv2.VideoWriter('4farger.avi', fourcc, fps, (width, height))
+out = cv2.VideoWriter(videoname +'.avi', fourcc, fps, (width, height))
 counter = 0
 pointbuffer = []
 
@@ -59,7 +67,7 @@ blob_params.minInertiaRatio = 0.3
 blob_params.minDistBetweenBlobs = 500
 blob_params.filterByArea = True
 blob_params.minArea = 60
-blob_params.maxArea = 200
+blob_params.maxArea = 50000
 blob_params.filterByConvexity = True
 blob_params.minConvexity = 0.9
 blob_params.filterByColor = 0
@@ -69,11 +77,32 @@ detector = cv2.SimpleBlobDetector_create(blob_params)
 
 cv2.namedWindow('Keypoints',cv2.WINDOW_NORMAL)
 cv2.resizeWindow('Keypoints', 800,600)
+cv2.setMouseCallback('Keypoints',clickForColor)
 ret,img=cap.read()
+
+roi_rect = cv2.selectROI('Select color', img)
+x, y, w, h = roi_rect
+roi = img[y:(y+h),x:(x+w)]
+cv2.destroyWindow('Select color')
+
+roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+
+goal_hsv = np.mean(roi_hsv, axis=(0, 1))
+hsv_variance = np.var(roi_hsv, axis=(0, 1))
+out_of_bounds = False
+
+if hsv_variance[0] < 1000:
+    hist, bin_edges = np.histogram(roi_hsv[:, :, 0],bins = 10,range=[0,180])
+    ind = np.argpartition(hist,-3)[-3:]
+    bin_starts = bin_edges[ind]
+    bin_ends = bin_edges[ind + 1]
+    out_of_bounds = True
+
 
 #huehue=extractMedianCircle(img[:,:,1],150,150,50)
 #print('test1: ',huehue)
 #print('test2: ',img[150,150,1])
+
 
 paused = False
 
@@ -96,20 +125,31 @@ while (cap.isOpened()):
         # ret2, th2 = cv2.threshold(v, 255 - vthresh, 255, cv2.THRESH_BINARY_INV)
         # h = np.multiply(h, (th2 / 255).astype(np.uint8), dtype='uint8')
 
-        # define range of pink color in HSV
-        lower_pink = np.array([130, 50, 50])
-        upper_pink = np.array([180, 255, 255])
-        # Threshold the HSV image to get only blue colors
-        mask = cv2.inRange(hsv, lower_pink, upper_pink)
+        lower_bound = np.array(goal_hsv - np.sqrt(hsv_variance))
+        upper_bound = np.array(np.clip(goal_hsv + np.sqrt(hsv_variance),[0,0,0],[180,255,255]))
+
+        mask = cv2.inRange(hsv, lower_bound, upper_bound)
+        if out_of_bounds:
+            mask = np.zeros(np.shape(hsv[:,:,0]),dtype='uint8')
+            for ind in range(0,len(bin_starts)):
+                lower_bound = np.array([bin_starts[ind],50,50])
+                upper_bound = np.array([bin_ends[ind],255,255])
+
+                temp = cv2.inRange(hsv, lower_bound, upper_bound)
+                #cv2.imshow("Keypoints", temp)
+                #cv2.waitKey(0)
+                mask = cv2.bitwise_or(temp, mask)
+                #cv2.imshow("Keypoints", mask)
+                #cv2.waitKey(0)
+
         # Bitwise-AND mask and original image
         res = cv2.bitwise_and(img, img, mask=mask)
-
  
         filtered = cv2.GaussianBlur(res, (15, 15), 1)
         keypoints = detector.detect(filtered)
         # Draw detected blobs as red circles.
         # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the circle corresponds to the size of blob
-        im_with_keypoints = cv2.drawKeypoints(img, keypoints, np.array([]), (0, 255, 0),
+        im_with_keypoints = cv2.drawKeypoints(filtered, keypoints, np.array([]), (0, 255, 0),
                                               cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
         pointfeatures = list(map(lambda keypoint: PointFeatures(
@@ -171,8 +211,6 @@ cv2.destroyAllWindows()
 
 pointString=[]
 similarity_threshold=100
-
-
 
 
 # Ugly pointmatching code...  I am sorry ;(
