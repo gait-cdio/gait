@@ -13,7 +13,7 @@ plt.ioff()
 
 ColorInterval = namedtuple('ColorInterval', ['mean_hsv', 'variance'])
 
-videoname = 'onefoot'
+videoname = '4farger'
 cache_filename = videoname + '.detections.npy'
 
 if 'cached' in sys.argv and os.path.isfile(cache_filename):
@@ -150,7 +150,7 @@ else:
             # Bitwise-AND mask and original image
             res = cv2.bitwise_and(img, img, mask=mask)
 
-            filtered = cv2.GaussianBlur(res, (15, 15), 1)
+            filtered = cv2.GaussianBlur(res, (15, 15), 3)
             keypoints = detector.detect(res)
             # Draw detected blobs as red circles.
             # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the qcircle corresponds to the size of blob
@@ -211,6 +211,8 @@ def extract_position_square(item):
 # plt.show()
 
 #pointString = [s for s in pointString if len(s) > 10]
+
+np.save(videoname + '.detections.matched.npy', pointString)
 
 f, axes = plt.subplots(ncols=2)
 
