@@ -32,7 +32,7 @@ class ColorTracker:
         self.hsv_max = (180, 255, 255)
 
         self.gaussian_kernel_size = (15, 15)
-        self.gaussian_kernel_sigma = 3
+        self.gaussian_kernel_sigma = 1
 
         self.visualize_keypoints = False
         self.visualize_blurred_masked = True

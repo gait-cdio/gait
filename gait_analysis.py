@@ -1,4 +1,6 @@
 import cv2
+import numpy as np
+
 from colortracker import ColorTracker
 import matplotlib.pyplot as plt
 
@@ -7,7 +9,7 @@ plt.ioff()
 # Load videostream
 # video_stream = load_video() | stream_from_webcam()
 
-filename = 'stiffleg.mp4'  # TODO: parse arguments for this
+filename = '4farger.mp4'  # TODO: parse arguments for this
 cap = cv2.VideoCapture(filename)
 
 # Initialize stuff
@@ -66,3 +68,7 @@ plt.show()
 # Generate foot down/up
 
 # Present results
+
+np.save(filename + '_quite_nice', tracks)
+
+print('Done and done.')
