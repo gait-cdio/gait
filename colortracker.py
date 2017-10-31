@@ -39,7 +39,7 @@ class ColorTracker:
 
     def detect(self, img, frame_nr):
         if self.median_filter:
-            blurred_img = cv2.medianBlur(img, 5)
+            blurred_img = cv2.medianBlur(img, 3)
             hsv = cv2.cvtColor(blurred_img, cv2.COLOR_BGR2HSV)
         else:
             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -65,8 +65,18 @@ class ColorTracker:
                 frame=frame_nr
             ), keypoints))
 
-    def associate(self):
-        pass
+    def associate(self, detections, similarity_threshold=100):
+        tracks = []
+        for frame_index in range(0, len(detections)):
+            # Current frame
+            new_points = detections[frame_index]
+
+            match_points(new_points, tracks, similarity_threshold)
+        return tracks
+
+    def cleanup_windows(self):
+        cv2.destroyWindow('Blurred masked')
+        cv2.destroyWindow('Keypoints')
 
 
 def visualize_detections(img, keypoints, window_title='Keypoints'):

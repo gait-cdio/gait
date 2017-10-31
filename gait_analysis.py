@@ -1,5 +1,8 @@
 import cv2
 from colortracker import ColorTracker
+import matplotlib.pyplot as plt
+
+plt.ioff()
 
 # Load videostream
 # video_stream = load_video() | stream_from_webcam()
@@ -16,11 +19,14 @@ keypoint_tracker = ColorTracker()
 paused = False
 
 # Detect keypoints (heel, toe) in each frame
+detections = []
 frame_nr = 0
 while cap.isOpened():
     ret, img = cap.read()
     if ret:
-        detections = keypoint_tracker.detect(img, frame_nr)
+        detections_for_frame = keypoint_tracker.detect(img, frame_nr)
+        detections.append(detections_for_frame)
+
         if paused:
             delay = 0
         else:
@@ -33,10 +39,24 @@ while cap.isOpened():
             break
         frame_nr += 1
     else:
+        keypoint_tracker.cleanup_windows()
         break
 
 # Associate keypoints to form tracks
-tracks = keypoint_tracker.associate()
+tracks = keypoint_tracker.associate(detections)
+
+f, axes = plt.subplots(ncols=2)
+
+for index in range(0, len(tracks)):
+    curve = tracks[index]
+    t_c=[p.frame for p in curve]
+    x_c=[p.position[0] for p in curve]
+    y_c=[p.position[1] for p in curve]
+    axes[0].plot(t_c, x_c, 'o-', markersize=2)
+    axes[1].plot(t_c, y_c, 'o-', markersize=2)
+
+axes[1].invert_yaxis()
+plt.show()
 
 # Generate foot down/up
 
