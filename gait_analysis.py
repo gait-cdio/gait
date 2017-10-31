@@ -7,7 +7,7 @@ plt.ioff()
 # Load videostream
 # video_stream = load_video() | stream_from_webcam()
 
-filename = '4fargersilly.mp4'  # TODO: parse arguments for this
+filename = 'stiffleg.mp4'  # TODO: parse arguments for this
 cap = cv2.VideoCapture(filename)
 
 # Initialize stuff
@@ -45,6 +45,8 @@ while cap.isOpened():
 # Associate keypoints to form tracks
 tracks = keypoint_tracker.associate(detections)
 
+# TODO(rolf): make this plotting code prettier
+
 f, axes = plt.subplots(ncols=2)
 
 for index in range(0, len(tracks)):
@@ -57,6 +59,9 @@ for index in range(0, len(tracks)):
 
 axes[1].invert_yaxis()
 plt.show()
+
+# TODO(rolf): link the subplots in some way to easily see which points correspond,
+# for example by highlighting the same x value in both subplots when hovering a point in one subplot
 
 # Generate foot down/up
 
