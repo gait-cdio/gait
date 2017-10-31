@@ -150,11 +150,11 @@ else:
             # Bitwise-AND mask and original image
             res = cv2.bitwise_and(img, img, mask=mask)
 
-            filtered = cv2.GaussianBlur(res, (15, 15), 3)
-            keypoints = detector.detect(res)
+            filtered = cv2.GaussianBlur(res, (15, 15), 1)
+            keypoints = detector.detect(filtered)
             # Draw detected blobs as red circles.
             # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the qcircle corresponds to the size of blob
-            im_with_keypoints = cv2.drawKeypoints(res, keypoints, np.array([]), (0, 255, 0),
+            im_with_keypoints = cv2.drawKeypoints(filtered, keypoints, np.array([]), (0, 255, 0),
                                                   cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
             pointfeatures = list(map(lambda keypoint: PointFeatures(
