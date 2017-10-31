@@ -32,7 +32,7 @@ class ColorTracker:
         self.hsv_max = (180, 255, 255)
 
         self.gaussian_kernel_size = (15, 15)
-        self.gaussian_kernel_sigma = 1
+        self.gaussian_kernel_sigma = 3
 
         self.visualize_keypoints = False
         self.visualize_blurred_masked = True
@@ -72,7 +72,10 @@ class ColorTracker:
             new_points = detections[frame_index]
 
             match_points(new_points, tracks, similarity_threshold)
-        return tracks
+
+        long_tracks = list(filter(lambda track: len(track) >= 15, tracks))
+
+        return long_tracks
 
     def cleanup_windows(self):
         cv2.destroyWindow('Blurred masked')
