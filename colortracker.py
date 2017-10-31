@@ -3,7 +3,77 @@ import numpy as np
 from collections import namedtuple
 
 
+class ColorTracker:
+    def __init__(self):
+        self.blob_params = cv2.SimpleBlobDetector_Params()
+        self.blob_params.minThreshold = 10
+        self.blob_params.maxThreshold = 180
+        self.blob_params.thresholdStep = 20
+        self.blob_params.minRepeatability = 1
+        self.blob_params.filterByCircularity = False
+        self.blob_params.minCircularity = 0.5
+        self.blob_params.filterByInertia = True
+        self.blob_params.minInertiaRatio = 0.3
+        self.blob_params.minDistBetweenBlobs = 10
+        self.blob_params.filterByArea = True
+        self.blob_params.minArea = 60
+        self.blob_params.maxArea = 50000
+        self.blob_params.filterByConvexity = True
+        self.blob_params.minConvexity = 0.9
+        self.blob_params.filterByColor = 0
+        self.blob_params.blobColor = 100
+
+        self.detector = cv2.SimpleBlobDetector_create(self.blob_params)
+
+        self.hsv_min = (170, 0, 0)
+        self.hsv_max = (180, 255, 255)
+
+        self.gaussian_kernel_size = (15, 15)
+        self.gaussian_kernel_sigma = 1
+
+        self.visualize_keypoints = True
+
+    def detect(self, img, frame_nr):
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        mask = np.zeros(np.shape(hsv[:, :, 0]), dtype='uint8')
+        mask = cv2.inRange(hsv, self.hsv_min, self.hsv_max)
+
+        masked_img = cv2.bitwise_and(img, img, mask=mask)
+        blurred = cv2.GaussianBlur(masked_img,
+                                   self.gaussian_kernel_size,
+                                   self.gaussian_kernel_sigma)
+
+        keypoints = self.detector.detect(blurred)
+
+        if self.visualize_keypoints:
+            visualize_detections(img, keypoints)
+
+        return list(map(lambda keypoint: PointFeatures(
+                position=keypoint.pt,
+                size=keypoint.size,
+                hue=float(hsv[int(keypoint.pt[1]), int(keypoint.pt[0]), 0]),
+                frame=frame_nr
+            ), keypoints))
+
+    def associate(self):
+        pass
+
+
+def visualize_detections(img, keypoints):
+    im_with_keypoints = cv2.drawKeypoints(img,
+                                          keypoints,
+                                          np.array([]),
+                                          (0, 255, 0),
+                                          cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+
+    cv2.namedWindow('Keypoints', cv2.WINDOW_NORMAL)
+    cv2.imshow("Keypoints", im_with_keypoints)
+
+
+
+# TODO remove legacy code below
 PointFeatures = namedtuple('PointFeatures', ['position', 'size', 'hue', 'frame'])
+
 
 def match_points(new_points, pointString, similarity_threshold):
     # Simularities between current frame and previous pointstrings
@@ -44,8 +114,8 @@ def match_points(new_points, pointString, similarity_threshold):
 
 
 def extract_median_circle(img, xpos, ypos, radius):
-    cir=np.zeros(img.shape,np.uint8)
-    cv2.circle(cir,center=(xpos,ypos),radius=radius,color=255,thickness=-1)
+    cir = np.zeros(img.shape, np.uint8)
+    cv2.circle(cir, center=(xpos, ypos), radius=radius, color=255, thickness=-1)
     return np.median(img[(cir == 255)])
 
 

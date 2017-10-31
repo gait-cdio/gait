@@ -26,6 +26,7 @@ else:
     fps = cap.get(cv2.CAP_PROP_FPS)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     out = cv2.VideoWriter(videoname +'.avi', fourcc, fps, (width, height))
+
     counter = 0
     pointbuffer = []
 
