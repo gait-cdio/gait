@@ -4,7 +4,7 @@ from colortracker import ColorTracker
 # Load videostream
 # video_stream = load_video() | stream_from_webcam()
 
-filename = 'pinkdot.mp4'  # TODO: parse arguments for this
+filename = '4farger.mp4'  # TODO: parse arguments for this
 cap = cv2.VideoCapture(filename)
 
 # Initialize stuff

@@ -4,7 +4,7 @@ from collections import namedtuple
 
 
 class ColorTracker:
-    def __init__(self):
+    def __init__(self, median_filter=True):
         self.blob_params = cv2.SimpleBlobDetector_Params()
         self.blob_params.minThreshold = 10
         self.blob_params.maxThreshold = 180
@@ -25,28 +25,37 @@ class ColorTracker:
 
         self.detector = cv2.SimpleBlobDetector_create(self.blob_params)
 
-        self.hsv_min = (170, 0, 0)
+        self.median_filter = median_filter
+
+        self.hsv_min = (80, 0, 0)
         self.hsv_max = (180, 255, 255)
 
         self.gaussian_kernel_size = (15, 15)
         self.gaussian_kernel_sigma = 1
 
-        self.visualize_keypoints = True
+        self.visualize_keypoints = False
+        self.visualize_blurred_masked = True
 
     def detect(self, img, frame_nr):
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        mask = np.zeros(np.shape(hsv[:, :, 0]), dtype='uint8')
+        if self.median_filter:
+            blurred_img = cv2.medianBlur(img, 5)
+            hsv = cv2.cvtColor(blurred_img, cv2.COLOR_BGR2HSV)
+        else:
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
         mask = cv2.inRange(hsv, self.hsv_min, self.hsv_max)
 
         masked_img = cv2.bitwise_and(img, img, mask=mask)
-        blurred = cv2.GaussianBlur(masked_img,
+        blurred_masked = cv2.GaussianBlur(masked_img,
                                    self.gaussian_kernel_size,
                                    self.gaussian_kernel_sigma)
 
-        keypoints = self.detector.detect(blurred)
+        keypoints = self.detector.detect(blurred_masked)
 
         if self.visualize_keypoints:
             visualize_detections(img, keypoints)
+        if self.visualize_blurred_masked:
+            visualize_detections(blurred_masked, keypoints, window_title='Blurred masked')
 
         return list(map(lambda keypoint: PointFeatures(
                 position=keypoint.pt,
@@ -59,15 +68,15 @@ class ColorTracker:
         pass
 
 
-def visualize_detections(img, keypoints):
+def visualize_detections(img, keypoints, window_title='Keypoints'):
     im_with_keypoints = cv2.drawKeypoints(img,
                                           keypoints,
                                           np.array([]),
                                           (0, 255, 0),
                                           cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
-    cv2.namedWindow('Keypoints', cv2.WINDOW_NORMAL)
-    cv2.imshow("Keypoints", im_with_keypoints)
+    cv2.namedWindow(window_title, cv2.WINDOW_NORMAL)
+    cv2.imshow(window_title, im_with_keypoints)
 
 
 
