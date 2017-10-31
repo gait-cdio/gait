@@ -27,6 +27,7 @@ class ColorTracker:
 
         self.median_filter = median_filter
 
+        # This seems to capture blue and pink
         self.hsv_min = (80, 0, 0)
         self.hsv_max = (180, 255, 255)
 
