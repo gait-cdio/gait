@@ -3,6 +3,16 @@ import numpy as np
 from collections import namedtuple
 
 
+def variance_greater_than(threshold):
+    def fun(track):
+        x = list(map(lambda point: point.position[0], track))
+        x_variance = np.var(x)
+
+        return x_variance > threshold
+
+    return fun
+
+
 class ColorTracker:
     def __init__(self, median_filter=True):
         self.blob_params = cv2.SimpleBlobDetector_Params()
@@ -36,6 +46,8 @@ class ColorTracker:
 
         self.visualize_keypoints = False
         self.visualize_blurred_masked = True
+
+        self.variance_threshold = 20 ** 2
 
     def detect(self, img, frame_nr):
         if self.median_filter:
@@ -75,7 +87,9 @@ class ColorTracker:
 
         long_tracks = list(filter(lambda track: len(track) >= 15, tracks))
 
-        return long_tracks
+        plausible_tracks = list(filter(variance_greater_than(self.variance_threshold), long_tracks))
+
+        return plausible_tracks
 
     def cleanup_windows(self):
         cv2.destroyWindow('Blurred masked')
@@ -133,12 +147,6 @@ def match_points(new_points, pointString, similarity_threshold):
 
             simMat[:, new_point_index] = np.nan
             simMat[previous_point_index, :] = np.nan
-
-
-def extract_median_circle(img, xpos, ypos, radius):
-    cir = np.zeros(img.shape, np.uint8)
-    cv2.circle(cir, center=(xpos, ypos), radius=radius, color=255, thickness=-1)
-    return np.median(img[(cir == 255)])
 
 
 # Low scores if similar
