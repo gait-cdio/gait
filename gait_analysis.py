@@ -49,7 +49,7 @@ tracks = keypoint_tracker.associate(detections)
 
 # TODO(rolf): make this plotting code prettier
 
-f, axes = plt.subplots(ncols=2)
+fig, axes = plt.subplots(ncols=2)
 
 for index in range(0, len(tracks)):
     curve = tracks[index]

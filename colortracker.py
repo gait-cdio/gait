@@ -48,8 +48,8 @@ class ColorTracker:
 
         masked_img = cv2.bitwise_and(img, img, mask=mask)
         blurred_masked = cv2.GaussianBlur(masked_img,
-                                   self.gaussian_kernel_size,
-                                   self.gaussian_kernel_sigma)
+                                          self.gaussian_kernel_size,
+                                          self.gaussian_kernel_sigma)
 
         keypoints = self.detector.detect(blurred_masked)
 
@@ -59,11 +59,11 @@ class ColorTracker:
             visualize_detections(blurred_masked, keypoints, window_title='Blurred masked')
 
         return list(map(lambda keypoint: PointFeatures(
-                position=keypoint.pt,
-                size=keypoint.size,
-                hue=float(hsv[int(keypoint.pt[1]), int(keypoint.pt[0]), 0]),
-                frame=frame_nr
-            ), keypoints))
+            position=keypoint.pt,
+            size=keypoint.size,
+            hue=float(hsv[int(keypoint.pt[1]), int(keypoint.pt[0]), 0]),
+            frame=frame_nr
+        ), keypoints))
 
     def associate(self, detections, similarity_threshold=100):
         tracks = []
@@ -91,7 +91,6 @@ def visualize_detections(img, keypoints, window_title='Keypoints'):
 
     cv2.namedWindow(window_title, cv2.WINDOW_NORMAL)
     cv2.imshow(window_title, im_with_keypoints)
-
 
 
 # TODO remove legacy code below
