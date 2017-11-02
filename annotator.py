@@ -3,7 +3,7 @@ import cv2
 import imageio
 import os
 
-videoname='4farger.mp4'
+videoname='4fargersilly.mp4'
 reader = imageio.get_reader(videoname)
 imsize=reader.get_meta_data()['size']
 nframes = reader.get_meta_data()['nframes']

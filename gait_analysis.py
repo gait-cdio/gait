@@ -2,14 +2,17 @@ import cv2
 import numpy as np
 
 from colortracker import ColorTracker
+from footupdown import estimate_naive
 import matplotlib.pyplot as plt
+import utils
+import os.path
 
 plt.ioff()
 
 # Load videostream
 # video_stream = load_video() | stream_from_webcam()
 
-filename = '4fargersilly.mp4'  # TODO: parse arguments for this
+filename = '4farger.mp4'  # TODO: parse arguments for this
 cap = cv2.VideoCapture(filename)
 
 # Initialize stuff
@@ -46,6 +49,7 @@ while cap.isOpened():
 
 # Associate keypoints to form tracks
 tracks = keypoint_tracker.associate(detections)
+np.save(filename + '_quite_nice', tracks)
 
 # TODO(rolf): make this plotting code prettier
 
@@ -53,9 +57,9 @@ fig, axes = plt.subplots(ncols=2)
 
 for index in range(0, len(tracks)):
     curve = tracks[index]
-    t_c=[p.frame for p in curve]
-    x_c=[p.position[0] for p in curve]
-    y_c=[p.position[1] for p in curve]
+    t_c = [p.frame for p in curve]
+    x_c = [p.position[0] for p in curve]
+    y_c = [p.position[1] for p in curve]
     axes[0].plot(t_c, x_c, 'o-', markersize=2)
     axes[1].plot(t_c, y_c, 'o-', markersize=2)
 
@@ -67,8 +71,39 @@ plt.show()
 
 # Generate foot down/up
 
+updown_estimations = estimate_naive(tracks)
+
 # Present results
 
-np.save(filename + '_quite_nice', tracks)
+
+f, axes = plt.subplots(ncols=2)
+
+for track_index in range(0, len(updown_estimations)):
+    updown_estimation = updown_estimations[track_index]
+    point_track = tracks[track_index]
+    estdxline = axes[0].plot((1 + index) * 1000 * updown_estimation, 'o-', markersize=2,
+                             label='estimated up/down, index ' + str(track_index))
+    estdyline = axes[1].plot(750 - (1 + index) * 100 * updown_estimation, 'o-', markersize=2,
+                             label='estimated up/down, index ' + str(track_index))
+
+    t = [p.frame for p in point_track]
+    x = [p.position[0] for p in point_track]
+
+    xline = axes[0].plot(t, x, 'o-', markersize=2, label='x position, index ' + str(track_index))
+
+filename_base = os.path.splitext(filename)[0]
+footstates = np.load(filename_base + '.npy')
+updown_groundtruth = utils.annotationToOneHot(footstates)
+
+xleftfoot = axes[0].plot(3000 * updown_groundtruth[0, :], 'o-', markersize=2, label='ground truth up/down')
+yleftfoot = axes[1].plot(750 - 300 * updown_groundtruth[0, :], 'o-', markersize=2, label='ground truth up/down')
+axes[0].legend()
+axes[1].legend()
+
+axes[0].grid(linestyle='-')
+axes[1].grid(linestyle='-')
+
+axes[1].invert_yaxis()
+plt.show()
 
 print('Done and done.')
