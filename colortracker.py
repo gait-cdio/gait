@@ -44,8 +44,8 @@ class ColorTracker:
         self.gaussian_kernel_size = (15, 15)
         self.gaussian_kernel_sigma = 1
 
-        self.visualize_keypoints = False
-        self.visualize_blurred_masked = True
+        self.visualize_keypoints = True
+        self.visualize_blurred_masked = False
 
         self.variance_threshold = 20 ** 2
 
@@ -77,7 +77,7 @@ class ColorTracker:
             frame=frame_nr
         ), keypoints))
 
-    def associate(self, detections, similarity_threshold=100):
+    def associate(self, detections, similarity_threshold=120):
         tracks = []
         for frame_index in range(0, len(detections)):
             # Current frame
@@ -129,8 +129,8 @@ def match_points(new_points, pointString, similarity_threshold):
         for ix in range(0, num_previous_points):
             for point_index in range(0, num_detections):
                 # Only distance at the moment ( 0,0,0 )
-                simMat[ix, point_index] = feature_distance(pointString[ix][-1], new_points[point_index], size_weight=0,
-                                                           hue_weight=4, time_weight=1)
+                simMat[ix, point_index] = feature_distance(pointString[ix][-1], new_points[point_index], size_weight=2,
+                                                           hue_weight=5, time_weight=2)
 
         while True:
             try:
