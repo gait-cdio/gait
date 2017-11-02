@@ -92,11 +92,16 @@ for track_index in range(0, len(updown_estimations)):
     xline = axes[0].plot(t, x, 'o-', markersize=2, label='x position, index ' + str(track_index))
 
 filename_base = os.path.splitext(filename)[0]
-footstates = np.load(filename_base + '.npy')
-updown_groundtruth = utils.annotationToOneHot(footstates)
+groundtruth_filename = filename_base + '.npy'
+if os.path.isfile(groundtruth_filename):
+    footstates = np.load(groundtruth_filename)
+    updown_groundtruth = utils.annotationToOneHot(footstates)
 
-xleftfoot = axes[0].plot(3000 * updown_groundtruth[0, :], 'o-', markersize=2, label='ground truth up/down')
-yleftfoot = axes[1].plot(750 - 300 * updown_groundtruth[0, :], 'o-', markersize=2, label='ground truth up/down')
+    xleftfoot = axes[0].plot(3000 * updown_groundtruth[0, :], 'o-', markersize=2, label='ground truth up/down')
+    yleftfoot = axes[1].plot(750 - 300 * updown_groundtruth[0, :], 'o-', markersize=2, label='ground truth up/down')
+else:
+    print('WARNING: could not find ground truth for foot up/down')
+
 axes[0].legend()
 axes[1].legend()
 
