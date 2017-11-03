@@ -2,6 +2,7 @@
   <dictionary name="cleese">
     <words>
       <w>keypoint</w>
+      <w>priori</w>
     </words>
   </dictionary>
 </component>

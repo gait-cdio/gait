@@ -30,14 +30,11 @@ class Track:
 
     def update_feature(self, feature = None):
         if(feature): self.feature = feature
-        print(self.x[0,0])
-        print(self.feature.position[0])
-        self.feature.position[0] = self.x[0,0]
-        self.feature.position[1] = self.x[2,0]
+        self.feature.position = (self.x[0,0], self.x[2,0])
 
     def correct(self, x, y):
         # Kalman filter measurement update
-        z = np.matrix([[x],[y]], dtype = float)
+        z = np.matrix([[x],[y]], dtype=float)
         x = self.x; F = self.F; H = self.H; P = self.P; R = self.R
 
         y = z - H*x
@@ -49,12 +46,13 @@ class Track:
         self.P = (I - K*H)*P
     
     def predict(self):
-        x = self.x; F = self.F; P = self.P; Q = self.Q;
+        x = self.x; F = self.F; P = self.P; Q = self.Q
 
         self.x = F*x
         self.P = F*P*F.transpose() + Q
 
-def filter():
+
+def points_to_tracks(detections, dist_fun, similarity_threshold=10000):
     tracks = []
 # Run kalman filter
     for new_detections in detections:
@@ -64,28 +62,22 @@ def filter():
             track.update_feature()
 
         # If tracks is empty, create new track for each detection
-        if not tracks:
-            for detection in new_detections:
-                x = detection.position[0]
-                y = detection.position[1]
-                tracks.append(Track(x, y, feature = detection))
-        else: 
-            tracked_detections = [t.feature for t in tracks] 
-            match_list = match(tracked_detections, new_detections, colortracker.feature_distance, 10000)
+        tracked_detections = [t.feature for t in tracks]
+        match_list = match(tracked_detections, new_detections, dist_fun, similarity_threshold)
 
-            for m in match_list:
-                x = new_detections[m[1]].position[0]
-                y = new_detections[m[1]].position[1]
-                tracks[m[0]].correct(x, y)
-                tracks[m[0]].update_feature(new_detections[m[1]])
+        for track_index, detection_index in match_list:
+            x, y = new_detections[detection_index].position
+            tracks[track_index].correct(x, y)
+            tracks[track_index].update_feature(new_detections[detection_index])
 
-            not_found  = list(set(range(0,len(tracks))) -         set([t[0] for t in match_list]))
-            new_tracks = list(set(range(0,len(new_detections))) - set([t[1] for t in match_list]))
+        not_found  = list(set(range(0,len(tracks))) -         set([t[0] for t in match_list]))
+        new_tracks = list(set(range(0,len(new_detections))) - set([t[1] for t in match_list]))
 
-            for new in new_tracks:
-                x = new_detections[new].position[0]
-                y = new_detections[new].position[1]
-                tracks.append(Track(x, y, feature = new_detections[new]))
+        for new in new_tracks:
+            x, y = new_detections[new].position
+            tracks.append(Track(x, y, feature=new_detections[new]))
+
+    return tracks
 
 
 def match(list1, list2, dist_fun, similarity_threshold):

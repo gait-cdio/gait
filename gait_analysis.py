@@ -2,6 +2,8 @@ import cv2
 import imageio
 import numpy as np
 import matplotlib.pyplot as plt
+
+import tracker
 import utils
 import os.path
 
@@ -54,7 +56,7 @@ except(RuntimeError):
 keypoint_tracker.cleanup_windows()
 
 # Associate keypoints to form tracks
-tracks = keypoint_tracker.associate(detections)
+tracks = tracker.points_to_tracks(detections, dist_fun=colortracker.feature_distance)
 np.save(filename + '_quite_nice', tracks)
 
 # TODO(rolf): make this plotting code prettier
