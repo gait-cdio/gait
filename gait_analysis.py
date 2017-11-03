@@ -2,10 +2,12 @@ import cv2
 import imageio
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 
 import tracker
 import utils
 import os.path
+from gui import set_threshold
 
 from colortracker import ColorTracker
 import colortracker
@@ -17,57 +19,65 @@ plt.ioff()
 # Load videostream
 # video_stream = load_video() | stream_from_webcam()
 
-filename = 'onefoot.mp4'  # TODO: parse arguments for this
-video_reader = imageio.get_reader(filename)
-number_frames = video_reader.get_meta_data()['nframes']
+filename = '4farger.mp4'  # TODO: parse arguments for this
+cache_filename = filename + '.detections.npy'
 
-# Initialize stuff
-# Select marker/-less
-# Maybe prompt user to select colors, regions, etc.
-# Create instances of necessary classes (SimpleBlobDetector, TrackerKCF, etc.)
-keypoint_tracker = ColorTracker()
-font = cv2.FONT_HERSHEY_TRIPLEX
+if 'cached' in sys.argv and os.path.isfile(cache_filename):
+    detections = np.load(cache_filename)
+    number_frames = len(detections)
+else:
+    video_reader = imageio.get_reader(filename)
+    number_frames = video_reader.get_meta_data()['nframes']
 
-paused = False
+    # Initialize stuff
+    # Select marker/-less
+    # Maybe prompt user to select colors, regions, etc.
+    # Create instances of necessary classes (SimpleBlobDetector, TrackerKCF, etc.)
 
-# Detect keypoints (heel, toe) in each frame
-detections = []
-frame_nr = 0
-try:
-    for frame_nr, img_rgb in enumerate(video_reader):
-        img = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
-        cv2.putText(img, str(frame_nr), (10, 30), fontFace=font, fontScale=1, color=(0, 0, 255))
-        detections_for_frame = keypoint_tracker.detect(img, frame_nr)
-        detections.append(detections_for_frame)
+    keypoint_tracker = ColorTracker()
+    keypoint_tracker.hsv_min, keypoint_tracker.hsv_max = set_threshold(cv2.cvtColor(video_reader.get_data(40), cv2.COLOR_RGB2BGR))
 
-        if paused:
-            delay = 0
-        else:
-            delay = 1
+    font = cv2.FONT_HERSHEY_TRIPLEX
 
-        pressed_key = cv2.waitKey(delay) & 0xFF
-        if pressed_key == ord(' '):
-            paused = not paused
-        elif pressed_key == ord('q'):
-            break
-        frame_nr += 1
-except(RuntimeError):
-    print("Video has finished?")
-keypoint_tracker.cleanup_windows()
+    paused = False
 
-# Associate keypoints to form tracks
-tracks = tracker.points_to_tracks(detections, dist_fun=colortracker.feature_distance)
-np.save(filename + '_quite_nice', tracks)
+    # Detect keypoints (heel, toe) in each frame
+    detections = []
+    frame_nr = 0
+    try:
+        for frame_nr, img_rgb in enumerate(video_reader):
+            img = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+            cv2.putText(img, str(frame_nr), (10, 30), fontFace=font, fontScale=1, color=(0, 0, 255))
+            detections_for_frame = keypoint_tracker.detect(img, frame_nr)
+            detections.append(detections_for_frame)
+
+            if paused:
+                delay = 0
+            else:
+                delay = 1
+
+            pressed_key = cv2.waitKey(delay) & 0xFF
+            if pressed_key == ord(' '):
+                paused = not paused
+            elif pressed_key == ord('q'):
+                break
+            frame_nr += 1
+    except(RuntimeError):
+        print("Video has finished?")
+    keypoint_tracker.cleanup_windows()
+
+    # Associate keypoints to form tracks
+tracks = tracker.points_to_tracks(detections, dist_fun=colortracker.feature_distance, similarity_threshold=100)
+np.save(cache_filename, detections)
 
 # TODO(rolf): make this plotting code prettier
 
 fig, axes = plt.subplots(ncols=2)
 
-for index in range(0, len(tracks)):
-    curve = tracks[index]
-    t_c = [p.frame for p in curve]
-    x_c = [p.position[0] for p in curve]
-    y_c = [p.position[1] for p in curve]
+for track in tracks:
+    t_c = [state.frame for state in track.state_history]
+    x_c = [state.x for state in track.state_history]
+    y_c = [state.y for state in track.state_history]
     axes[0].plot(t_c, x_c, 'o-', markersize=2)
     axes[1].plot(t_c, y_c, 'o-', markersize=2)
 
@@ -86,12 +96,11 @@ updown_estimations, x_derivatives = estimate_naive(tracks, max_frame=number_fram
 
 f, axes = plt.subplots(ncols=2, nrows=2, sharex=True)
 
-for track_index in range(0, len(updown_estimations)):
+for track_index, point_track in enumerate(updown_estimations):
     updown_estimation = updown_estimations[track_index]
-    point_track = tracks[track_index]
-    estdxline = axes[0, 0].plot((1 + index) * 1000 * updown_estimation, 'o-', markersize=2,
+    estdxline = axes[0, 0].plot((1 + track_index) * 1000 * updown_estimation, 'o-', markersize=2,
                              label='estimated up/down, index ' + str(track_index))
-    estdyline = axes[0, 1].plot(750 - (1 + index) * 100 * updown_estimation, 'o-', markersize=2,
+    estdyline = axes[0, 1].plot(750 - (1 + track_index) * 100 * updown_estimation, 'o-', markersize=2,
                              label='estimated up/down, index ' + str(track_index))
     derivline = axes[1, 0].plot(range(0, number_frames), x_derivatives[track_index], 'o-', markersize=2)
     t = [p.frame for p in point_track]
