@@ -3,7 +3,7 @@ import cv2
 import imageio
 import os
 
-videoname='4fargersilly.mp4'
+videoname='twofeet.mp4'
 reader = imageio.get_reader(videoname)
 imsize=reader.get_meta_data()['size']
 nframes = reader.get_meta_data()['nframes']
@@ -36,7 +36,7 @@ while loop:
             if frame > 0:
                 frame = frame - 1
         elif pressed_key == ord('q'):
-            frame= loop=False
+            loop=False
         elif pressed_key == ord('e'):
             frame=0
         elif pressed_key == ord('r'):

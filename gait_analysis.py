@@ -1,4 +1,5 @@
 import cv2
+import imageio
 import numpy as np
 import matplotlib.pyplot as plt
 import utils
@@ -14,23 +15,26 @@ plt.ioff()
 # Load videostream
 # video_stream = load_video() | stream_from_webcam()
 
-filename = '4farger.mp4'  # TODO: parse arguments for this
-cap = cv2.VideoCapture(filename)
+filename = 'onefoot.mp4'  # TODO: parse arguments for this
+video_reader = imageio.get_reader(filename)
+number_frames = video_reader.get_meta_data()['nframes']
 
 # Initialize stuff
 # Select marker/-less
 # Maybe prompt user to select colors, regions, etc.
 # Create instances of necessary classes (SimpleBlobDetector, TrackerKCF, etc.)
 keypoint_tracker = ColorTracker()
+font = cv2.FONT_HERSHEY_TRIPLEX
 
 paused = False
 
 # Detect keypoints (heel, toe) in each frame
 detections = []
 frame_nr = 0
-while cap.isOpened():
-    ret, img = cap.read()
-    if ret:
+try:
+    for frame_nr, img_rgb in enumerate(video_reader):
+        img = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+        cv2.putText(img, str(frame_nr), (10, 30), fontFace=font, fontScale=1, color=(0, 0, 255))
         detections_for_frame = keypoint_tracker.detect(img, frame_nr)
         detections.append(detections_for_frame)
 
@@ -45,9 +49,9 @@ while cap.isOpened():
         elif pressed_key == ord('q'):
             break
         frame_nr += 1
-    else:
-        keypoint_tracker.cleanup_windows()
-        break
+except(RuntimeError):
+    print("Video has finished?")
+keypoint_tracker.cleanup_windows()
 
 # Associate keypoints to form tracks
 tracks = keypoint_tracker.associate(detections)
@@ -73,25 +77,25 @@ plt.show()
 
 # Generate foot down/up
 
-updown_estimations = estimate_naive(tracks)
+updown_estimations, x_derivatives = estimate_naive(tracks, max_frame=number_frames)
 
 # Present results
 
 
-f, axes = plt.subplots(ncols=2)
+f, axes = plt.subplots(ncols=2, nrows=2, sharex=True)
 
 for track_index in range(0, len(updown_estimations)):
     updown_estimation = updown_estimations[track_index]
     point_track = tracks[track_index]
-    estdxline = axes[0].plot((1 + index) * 1000 * updown_estimation, 'o-', markersize=2,
+    estdxline = axes[0, 0].plot((1 + index) * 1000 * updown_estimation, 'o-', markersize=2,
                              label='estimated up/down, index ' + str(track_index))
-    estdyline = axes[1].plot(750 - (1 + index) * 100 * updown_estimation, 'o-', markersize=2,
+    estdyline = axes[0, 1].plot(750 - (1 + index) * 100 * updown_estimation, 'o-', markersize=2,
                              label='estimated up/down, index ' + str(track_index))
-
+    derivline = axes[1, 0].plot(range(0, number_frames), x_derivatives[track_index], 'o-', markersize=2)
     t = [p.frame for p in point_track]
     x = [p.position[0] for p in point_track]
 
-    xline = axes[0].plot(t, x, 'o-', markersize=2, label='x position, index ' + str(track_index))
+    xline = axes[0, 0].plot(t, x, 'o-', markersize=2, label='x position, index ' + str(track_index))
 
 filename_base = os.path.splitext(filename)[0]
 groundtruth_filename = filename_base + '.npy'
@@ -99,18 +103,20 @@ if os.path.isfile(groundtruth_filename):
     footstates = np.load(groundtruth_filename)
     updown_groundtruth = utils.annotationToOneHot(footstates)
 
-    xleftfoot = axes[0].plot(3000 * updown_groundtruth[0, :], 'o-', markersize=2, label='ground truth up/down')
-    yleftfoot = axes[1].plot(750 - 300 * updown_groundtruth[0, :], 'o-', markersize=2, label='ground truth up/down')
+    xleftfoot = axes[0, 0].plot(3000 * updown_groundtruth[0, :], 'o-', markersize=2, label='ground truth up/down, left foot')
+    yleftfoot = axes[0, 1].plot(750 - 300 * updown_groundtruth[0, :], 'o-', markersize=2, label='ground truth up/down, left foot')
+    xrightfoot = axes[0, 0].plot(3000 * updown_groundtruth[1, :], 'o-', markersize=2, label='ground truth up/down, right foot')
+    yrightfoot = axes[0, 1].plot(750 - 300 * updown_groundtruth[1, :], 'o-', markersize=2, label='ground truth up/down, right foot')
 else:
     print('WARNING: could not find ground truth for foot up/down')
 
-axes[0].legend()
-axes[1].legend()
+axes[0, 0].legend()
+axes[0, 1].legend()
 
-axes[0].grid(linestyle='-')
-axes[1].grid(linestyle='-')
+axes[0, 0].grid(linestyle='-')
+axes[0, 1].grid(linestyle='-')
 
-axes[1].invert_yaxis()
+axes[0, 1].invert_yaxis()
 plt.show()
 
 print('Done and done.')
