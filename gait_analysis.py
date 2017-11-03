@@ -1,11 +1,13 @@
 import cv2
 import numpy as np
-
-from colortracker import ColorTracker
-from footupdown import estimate_naive
 import matplotlib.pyplot as plt
 import utils
 import os.path
+
+from colortracker import ColorTracker
+import colortracker
+from footupdown import estimate_naive
+from tracker import Track, match
 
 plt.ioff()
 

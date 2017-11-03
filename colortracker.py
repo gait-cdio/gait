@@ -107,7 +107,6 @@ def visualize_detections(img, keypoints, window_title='Keypoints'):
     cv2.imshow(window_title, im_with_keypoints)
 
 
-# TODO remove legacy code below
 PointFeatures = namedtuple('PointFeatures', ['position', 'size', 'hue', 'frame'])
 
 
