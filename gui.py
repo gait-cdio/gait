@@ -71,8 +71,11 @@ def mouseCallback(event, x, y, flags, w):
     if event == cv2.EVENT_LBUTTONDOWN:
         print('x, y = ' + str((x, y)))
         if x >= 5 and y >= 5:
-            mask = np.zeros(w.bgrIm.shape[0:2], dtype=np.uint8)
-            mask[(y-4):(y+4), (x-4):(x+4)] = 1
+            mask = np.zeros((w.bgrIm.shape[0] + 2, w.bgrIm.shape[1] + 2), dtype=np.uint8)
+            edges = cv2.Canny(w.bgrIm, 20, 150)
+
+            cv2.floodFill(w.bgrIm, mask, (y, x), 255) # Detta verkar inte göra något. Vad har jag missat?
+            cv2.imshow("mask", mask)
 
             b, g, r = cv2.mean(w.bgrIm, mask=mask)[0:3]
             print("r, g, b = " + str((r, g, b)))
