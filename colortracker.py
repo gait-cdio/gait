@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from collections import namedtuple
+from recordclass import recordclass
 
 
 def variance_greater_than(threshold):
@@ -44,8 +44,8 @@ class ColorTracker:
         self.gaussian_kernel_size = (15, 15)
         self.gaussian_kernel_sigma = 1
 
-        self.visualize_keypoints = True
-        self.visualize_blurred_masked = False
+        self.visualize_keypoints = False
+        self.visualize_blurred_masked = True
 
         self.variance_threshold = 20 ** 2
 
@@ -77,20 +77,6 @@ class ColorTracker:
             frame=frame_nr
         ), keypoints))
 
-    def associate(self, detections, similarity_threshold=120):
-        tracks = []
-        for frame_index in range(0, len(detections)):
-            # Current frame
-            new_points = detections[frame_index]
-
-            match_points(new_points, tracks, similarity_threshold)
-
-        long_tracks = list(filter(lambda track: len(track) >= 15, tracks))
-
-        plausible_tracks = list(filter(variance_greater_than(self.variance_threshold), long_tracks))
-
-        return plausible_tracks
-
     def cleanup_windows(self):
         cv2.destroyWindow('Blurred masked')
         cv2.destroyWindow('Keypoints')
@@ -107,45 +93,7 @@ def visualize_detections(img, keypoints, window_title='Keypoints'):
     cv2.imshow(window_title, im_with_keypoints)
 
 
-PointFeatures = namedtuple('PointFeatures', ['position', 'size', 'hue', 'frame'])
-
-
-def match_points(new_points, pointString, similarity_threshold):
-    # Simularities between current frame and previous pointstrings
-    num_previous_points = len(pointString)
-    num_detections = len(new_points)
-    if num_detections == 0:
-        pass
-    # First detection of any points
-    elif num_previous_points == 0:
-        for point_index in range(0, num_detections):
-            newPointList = [new_points[point_index]]
-            pointString.append(newPointList)
-
-    # Comparing previous strings and current frame
-    else:
-        simMat = np.zeros((num_previous_points, num_detections))
-        for ix in range(0, num_previous_points):
-            for point_index in range(0, num_detections):
-                # Only distance at the moment ( 0,0,0 )
-                simMat[ix, point_index] = feature_distance(pointString[ix][-1], new_points[point_index], size_weight=2,
-                                                           hue_weight=5, time_weight=2)
-
-        while True:
-            try:
-                best_match_position = np.unravel_index(np.nanargmin(simMat), (num_previous_points, num_detections))
-            except ValueError:
-                break
-            previous_point_index, new_point_index = best_match_position
-
-            if simMat[best_match_position] < similarity_threshold:
-                pointString[previous_point_index].append(new_points[new_point_index])
-            else:
-                newPointString = [new_points[new_point_index]]
-                pointString.append(newPointString)
-
-            simMat[:, new_point_index] = np.nan
-            simMat[previous_point_index, :] = np.nan
+PointFeatures = recordclass('PointFeatures', ['position', 'size', 'hue', 'frame'])
 
 
 # Low scores if similar

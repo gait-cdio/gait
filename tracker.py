@@ -1,12 +1,15 @@
 """ A track that is following a constant velocity model """
 
 import numpy as np
+from collections import namedtuple
+
+PositionData = namedtuple('PositionData', ['x', 'y', 'frame'])
 
 class Track:
-    def __init__(self, x = 0, y = 0, dx = 0, dy = 0, fps = 30, feature = None):
+    def __init__(self, start_frame=None, x=None, y=None, dx=0, dy=0, fps=30, feature=None):
         # State space model
-        # x = Ax + bu
-        # y = cx + du
+        # x = Fx + bu
+        # y = Hx + du
 
         self.dt = 1.0/fps
 
@@ -28,34 +31,41 @@ class Track:
         # Feature used for distance calculation
         self.feature = feature
 
+        self.current_frame = self.start_frame = start_frame
+        self.state_history = []
+
     def update_feature(self, feature = None):
         if(feature): self.feature = feature
         self.feature.position = (self.x[0,0], self.x[2,0])
 
-    def correct(self, x, y):
+    def measurement_update(self, position):
         # Kalman filter measurement update
-        z = np.matrix([[x],[y]], dtype=float)
+        z = np.matrix([[position[0]],[position[1]]], dtype=float)
         x = self.x; F = self.F; H = self.H; P = self.P; R = self.R
 
         y = z - H*x
         S = R + H*P*H.transpose()
         K = P*H.transpose()*np.linalg.inv(S)
 
-        I = np.eye(4, dtype = float)
+        I = np.eye(4, dtype=float)
         self.x = x + K*y
         self.P = (I - K*H)*P
-    
+
     def predict(self):
         x = self.x; F = self.F; P = self.P; Q = self.Q
 
+        old_position = x[0, 0], x[2, 0]
         self.x = F*x
         self.P = F*P*F.transpose() + Q
+        self.state_history.append(PositionData(x=old_position[0], y=old_position[1], frame=self.current_frame))
+
+        self.current_frame += 1
 
 
 def points_to_tracks(detections, dist_fun, similarity_threshold=10000):
     tracks = []
-# Run kalman filter
-    for new_detections in detections:
+# Run Kalman filter
+    for frame, new_detections in enumerate(detections):
         # Prediction 
         for track in tracks:
             track.predict()
@@ -66,16 +76,16 @@ def points_to_tracks(detections, dist_fun, similarity_threshold=10000):
         match_list = match(tracked_detections, new_detections, dist_fun, similarity_threshold)
 
         for track_index, detection_index in match_list:
-            x, y = new_detections[detection_index].position
-            tracks[track_index].correct(x, y)
+            tracks[track_index].measurement_update(new_detections[detection_index].position)
             tracks[track_index].update_feature(new_detections[detection_index])
 
-        not_found  = list(set(range(0,len(tracks))) -         set([t[0] for t in match_list]))
-        new_tracks = list(set(range(0,len(new_detections))) - set([t[1] for t in match_list]))
+        # TODO(rolf): make this readable
+        not_found  = list(set(range(0, len(tracks))) -         set([t[0] for t in match_list]))
+        new_tracks = list(set(range(0, len(new_detections))) - set([t[1] for t in match_list]))
 
         for new in new_tracks:
             x, y = new_detections[new].position
-            tracks.append(Track(x, y, feature=new_detections[new]))
+            tracks.append(Track(start_frame=frame, x=x, y=y, feature=new_detections[new]))
 
     return tracks
 
@@ -95,7 +105,8 @@ def match(list1, list2, dist_fun, similarity_threshold):
         except ValueError:
             break
 
-        if sim_mat[best_match] < similarity_threshold:
+        similarity_score = sim_mat[best_match]
+        if similarity_score < similarity_threshold:
             match_list.append(best_match)
             
         sim_mat[:, best_match[1]] = np.nan

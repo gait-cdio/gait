@@ -35,7 +35,7 @@ else:
     # Create instances of necessary classes (SimpleBlobDetector, TrackerKCF, etc.)
 
     keypoint_tracker = ColorTracker()
-    keypoint_tracker.hsv_min, keypoint_tracker.hsv_max = set_threshold(cv2.cvtColor(video_reader.get_data(40), cv2.COLOR_RGB2BGR))
+    keypoint_tracker.hsv_min, keypoint_tracker.hsv_max = set_threshold(video_reader)
 
     font = cv2.FONT_HERSHEY_TRIPLEX
 
