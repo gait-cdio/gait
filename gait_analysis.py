@@ -19,7 +19,7 @@ plt.ioff()
 # Load videostream
 # video_stream = load_video() | stream_from_webcam()
 
-filename = 'twofeet.mp4'  # TODO: parse arguments for this
+filename = '4farger.mp4'  # TODO: parse arguments for this
 cache_filename = filename + '.detections.npy'
 
 if 'cached' in sys.argv and os.path.isfile(cache_filename):
