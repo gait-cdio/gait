@@ -36,11 +36,10 @@ def estimate_naive(tracks, max_frame, applicability_std=1.3, blur_std=2, speed_t
     estimations=[]
     derivatives=[]
 
-    for index in range(0, len(tracks)):
-        curve = tracks[index]
-        t_c = [p.frame for p in curve]
-        x_c = [p.position[0] for p in curve]
-        y_c = [p.position[1] for p in curve]
+    for index, track in enumerate(tracks):
+        t_c = [state.frame for state in track.state_history]
+        x_c = [state.x for state in track.state_history]
+        y_c = [state.y for state in track.state_history]
         fixed_x, frame_offset = inpaint_1d(np.array(x_c), np.array(t_c), appStd=applicability_std)
         fixed_y, _ = inpaint_1d(np.array(y_c), np.array(t_c), appStd=applicability_std)
         dx_c = filt.gaussian_filter1d(input=fixed_x, sigma=blur_std, order=1, mode='nearest')  # order=1 lagpass + derivering. TODO explore mode options

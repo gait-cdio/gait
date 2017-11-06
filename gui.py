@@ -69,6 +69,7 @@ class WindowGUI: #Klass som innehåller information för GUI:t
         cv2.setTrackbarPos('Value lower threshold', self.windowName, self.lowerBound[2])
         cv2.setTrackbarPos('Value higher threshold', self.windowName, self.higherBound[2])
 
+
 def mouseCallback(event, x, y, flags, w):
     if event == cv2.EVENT_LBUTTONDOWN:
         print('x: ' + str(x) + ' y: ' + str(y))
@@ -85,12 +86,6 @@ def mouseCallback(event, x, y, flags, w):
                 w.updateWindowImage()
                 w.updateTrackbars()
 
-#Legacy, trackbars måste ha anropsfunktioner
-def nothing():
-    pass
-
-def selectFrameCallback(video_reader):
-    print(video_reader)
 
 def set_threshold(video_reader):
     w = WindowGUI(video_reader)

@@ -19,7 +19,7 @@ plt.ioff()
 # Load videostream
 # video_stream = load_video() | stream_from_webcam()
 
-filename = '4farger.mp4'  # TODO: parse arguments for this
+filename = 'twofeet.mp4'  # TODO: parse arguments for this
 cache_filename = filename + '.detections.npy'
 
 if 'cached' in sys.argv and os.path.isfile(cache_filename):
@@ -96,15 +96,15 @@ updown_estimations, x_derivatives = estimate_naive(tracks, max_frame=number_fram
 
 f, axes = plt.subplots(ncols=2, nrows=2, sharex=True)
 
-for track_index, point_track in enumerate(updown_estimations):
+for track_index, point_track in enumerate(tracks):
     updown_estimation = updown_estimations[track_index]
     estdxline = axes[0, 0].plot((1 + track_index) * 1000 * updown_estimation, 'o-', markersize=2,
                              label='estimated up/down, index ' + str(track_index))
     estdyline = axes[0, 1].plot(750 - (1 + track_index) * 100 * updown_estimation, 'o-', markersize=2,
                              label='estimated up/down, index ' + str(track_index))
     derivline = axes[1, 0].plot(range(0, number_frames), x_derivatives[track_index], 'o-', markersize=2)
-    t = [p.frame for p in point_track]
-    x = [p.position[0] for p in point_track]
+    t = [state.frame for state in point_track.state_history]
+    x = [state.x for state in point_track.state_history]
 
     xline = axes[0, 0].plot(t, x, 'o-', markersize=2, label='x position, index ' + str(track_index))
 
