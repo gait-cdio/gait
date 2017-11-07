@@ -27,6 +27,8 @@ if 'cached' in sys.argv and os.path.isfile(cache_filename):
     number_frames = len(detections)
 else:
     video_reader = imageio.get_reader(filename)
+
+
     number_frames = video_reader.get_meta_data()['nframes']
 
     # Initialize stuff
