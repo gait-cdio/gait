@@ -24,7 +24,7 @@ class Track:
                             [0,0,1,0]]) #     0  0  1  0
 
         # A priori covariance
-        self.P = np.asmatrix(np.diag([0.05, 0.05, 0.5, 0.5]), dtype=float)
+        self.P = np.asmatrix(np.diag([0.5, 0.05, 0.5, 0.05]), dtype=float)
         self.Q = np.asmatrix(np.diag([0.01, 0.01, 0.1, 0.1]), dtype=float)
         self.R = np.asmatrix(np.diag([0.01, 0.01]), dtype=float)
 
@@ -35,7 +35,7 @@ class Track:
         self.state_history = []
 
     def update_feature(self, feature = None):
-        if(feature): self.feature = feature
+        if feature: self.feature = feature
         self.feature.position = (self.x[0,0], self.x[2,0])
 
     def measurement_update(self, position):

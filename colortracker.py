@@ -98,13 +98,15 @@ PointFeatures = recordclass('PointFeatures', ['position', 'size', 'hue', 'frame'
 
 
 # Low scores if similar
-def feature_distance(point1, point2, distance_weight=1, size_weight=0, hue_weight=0, time_weight=0):
-    x1, y1 = point1.position
-    x2, y2 = point2.position
-    d2 = (x1 - x2) ** 2 + (y1 - y2) ** 2
-    s2 = (point1.size - point2.size) ** 2
-    h = np.abs(point1.hue - point2.hue)
-    t = np.abs(point1.frame - point2.frame)
-    s = np.sqrt(s2)
-    d = np.sqrt(d2)
-    return d * distance_weight + s * size_weight + h * hue_weight + t * time_weight
+def feature_distance(distance_weight=1, size_weight=0, hue_weight=0, time_weight=0):
+    def closure(point1, point2):
+        x1, y1 = point1.position
+        x2, y2 = point2.position
+        d2 = (x1 - x2) ** 2 + (y1 - y2) ** 2
+        s2 = (point1.size - point2.size) ** 2
+        h = np.abs(point1.hue - point2.hue)
+        t = np.abs(point1.frame - point2.frame)
+        s = np.sqrt(s2)
+        d = np.sqrt(d2)
+        return d * distance_weight + s * size_weight + h * hue_weight + t * time_weight
+    return closure
