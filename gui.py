@@ -71,20 +71,23 @@ def mouseCallback(event, x, y, flags, w):
     if event == cv2.EVENT_LBUTTONDOWN:
         print('x, y = ' + str((x, y)))
         if x >= 5 and y >= 5:
-            mask = np.zeros((w.bgrIm.shape[0] + 2, w.bgrIm.shape[1] + 2), dtype=np.uint8)
-            edges = cv2.Canny(w.bgrIm, 20, 150)
+            floodfill_mask = np.zeros((w.bgrIm.shape[0] + 2, w.bgrIm.shape[1] + 2), dtype=np.uint8)
+            hsv = cv2.cvtColor(w.bgrIm, cv2.COLOR_BGR2HSV).astype(np.float32)
+            h = hsv[:,:,0].astype(np.float32)
 
-            cv2.floodFill(w.bgrIm, mask, (y, x), 255) # Detta verkar inte göra något. Vad har jag missat?
-            cv2.imshow("mask", mask)
+            value_to_write_in_mask = 255
+            flags = (value_to_write_in_mask << 8) | cv2.FLOODFILL_MASK_ONLY
+            cv2.floodFill(hsv, floodfill_mask, (x, y), 255, loDiff=(10, 20, 10), upDiff=(10, 20, 10), flags=flags)
 
-            b, g, r = cv2.mean(w.bgrIm, mask=mask)[0:3]
-            print("r, g, b = " + str((r, g, b)))
-            h, s, v = cv2.cvtColor(np.uint8([[[r, g, b]]]), cv2.COLOR_RGB2HSV)[0,0,:]
-            print("h, s, v = ", str((h, s, v)))
-            h, s, v = tuple(map(round, (h, s, v)))
+            actual_mask = floodfill_mask[1:-1, 1:-1]
+            interesting_hsv_pixels = hsv[actual_mask == 255]
+
             if not flags & cv2.EVENT_FLAG_CTRLKEY:
-                w.lowerBound = np.clip(np.array([h-40,s-50,v-50]),[0,0,0],[180,256,256])
-                w.higherBound = np.clip(np.array([h+40,s+50,v+50]),[0,0,0],[180,256,256])
+                w.lowerBound = np.min(interesting_hsv_pixels, axis=0) - (10, 25, 25)
+                w.higherBound = np.max(interesting_hsv_pixels, axis=0) + (10, 25, 25)
+
+                w.lowerBound = np.clip(w.lowerBound, [0, 0, 0], [180, 255, 255]).astype(int)
+                w.higherBound = np.clip(w.higherBound, [0, 0, 0], [180, 255, 255]).astype(int)
                 w.updateWindowImage()
                 w.updateTrackbars()
 

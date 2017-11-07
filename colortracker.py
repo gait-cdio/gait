@@ -44,8 +44,8 @@ class ColorTracker:
         self.gaussian_kernel_size = (15, 15)
         self.gaussian_kernel_sigma = 1
 
-        self.visualize_keypoints = False
-        self.visualize_blurred_masked = True
+        self.visualize_keypoints = True
+        self.visualize_blurred_masked = False
 
         self.variance_threshold = 20 ** 2
 
@@ -90,6 +90,7 @@ def visualize_detections(img, keypoints, window_title='Keypoints'):
                                           cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
     cv2.namedWindow(window_title, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(window_title,800,600)
     cv2.imshow(window_title, im_with_keypoints)
 
 
