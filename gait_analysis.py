@@ -4,6 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
+from gait_argument_parser import parse_arguments
+
 import tracker
 import utils
 import os.path
@@ -14,19 +16,19 @@ import colortracker
 from footupdown import estimate_naive
 from tracker import Track, match
 
+args = parse_arguments()
+
 plt.ioff()
 
 # Load videostream
 # video_stream = load_video() | stream_from_webcam()
-
-filename = '4farger.mp4'  # TODO: parse arguments for this
-cache_filename = filename + '.detections.npy'
+cache_filename = args.filename + '.detections.npy'
 
 if 'cached' in sys.argv and os.path.isfile(cache_filename):
     detections = np.load(cache_filename)
     number_frames = len(detections)
 else:
-    video_reader = imageio.get_reader(filename)
+    video_reader = imageio.get_reader(args.filename)
     number_frames = video_reader.get_meta_data()['nframes']
 
     # Initialize stuff
@@ -109,7 +111,7 @@ for track_index, point_track in enumerate(tracks):
 
     xline = axes[0, 0].plot(t, x, 'o-', markersize=2, label='x position, index ' + str(track_index))
 
-filename_base = os.path.splitext(filename)[0]
+filename_base = os.path.splitext(args.filename)[0]
 groundtruth_filename = filename_base + '.npy'
 if os.path.isfile(groundtruth_filename):
     footstates = np.load(groundtruth_filename)
