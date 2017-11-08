@@ -18,6 +18,8 @@ from footupdown import estimate_detrend
 from tracker import Track, match
 from scipy import signal
 
+from visualize_gait import visualize_gait
+
 args = parse_arguments()
 
 plt.ioff()
@@ -135,6 +137,10 @@ axes[0, 1].grid(linestyle='-')
 axes[1, 0].grid(linestyle='-')
 
 axes[0, 1].invert_yaxis()
+plt.show()
+
+fig = visualize_gait(updown_estimations)
+fig.show()
 plt.show()
 
 print('Done and done.')
