@@ -13,7 +13,7 @@
     <module name="trackingtest" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/gait_analysis.py" />
-    <option name="PARAMETERS" value="cached" />
+    <option name="PARAMETERS" value="--cached True --filename twofeet.mp4" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <method />

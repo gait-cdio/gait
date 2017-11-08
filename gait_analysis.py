@@ -14,7 +14,9 @@ from gui import set_threshold
 from colortracker import ColorTracker
 import colortracker
 from footupdown import estimate_naive
+from footupdown import estimate_detrend
 from tracker import Track, match
+from scipy import signal
 
 args = parse_arguments()
 
@@ -24,7 +26,7 @@ plt.ioff()
 # video_stream = load_video() | stream_from_webcam()
 cache_filename = args.filename + '.detections.npy'
 
-if 'cached' in sys.argv and os.path.isfile(cache_filename):
+if args.cached and os.path.isfile(cache_filename):
     detections = np.load(cache_filename)
     number_frames = len(detections)
 else:
@@ -68,21 +70,22 @@ else:
         print("Video has finished?")
     keypoint_tracker.cleanup_windows()
 
+    np.save(cache_filename, detections)
+
     # Associate keypoints to form tracks
-tracks = tracker.points_to_tracks(detections, dist_fun=colortracker.feature_distance(hue_weight=2),
-                                  similarity_threshold=100)
-np.save(cache_filename, detections)
+tracks = tracker.points_to_tracks(detections, dist_fun=colortracker.feature_distance(hue_weight=2, size_weight=2, time_weight=1),
+                                  similarity_threshold=140)
 
 # TODO(rolf): make this plotting code prettier
 
-fig, axes = plt.subplots(ncols=2)
+fig, axes = plt.subplots(ncols=2, sharex=True)
 
 for track in tracks:
     t_c = [state.frame for state in track.state_history]
     x_c = [state.x for state in track.state_history]
     y_c = [state.y for state in track.state_history]
-    axes[0].plot(t_c, x_c, 'o-', markersize=2)
-    axes[1].plot(t_c, y_c, 'o-', markersize=2)
+    axes[0].plot(t_c, signal.detrend(x_c), 'o-', markersize=2)
+    axes[1].plot(t_c, signal.detrend(y_c), 'o-', markersize=2)
 
 axes[1].invert_yaxis()
 plt.show()
@@ -92,7 +95,7 @@ plt.show()
 
 # Generate foot down/up
 
-updown_estimations, x_derivatives = estimate_naive(tracks, max_frame=number_frames)
+updown_estimations, x_derivatives = estimate_detrend(tracks, max_frame=number_frames)
 
 # Present results
 
@@ -129,6 +132,7 @@ axes[0, 1].legend()
 
 axes[0, 0].grid(linestyle='-')
 axes[0, 1].grid(linestyle='-')
+axes[1, 0].grid(linestyle='-')
 
 axes[0, 1].invert_yaxis()
 plt.show()
