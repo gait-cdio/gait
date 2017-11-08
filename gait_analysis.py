@@ -69,7 +69,7 @@ else:
     keypoint_tracker.cleanup_windows()
 
     # Associate keypoints to form tracks
-tracks = tracker.points_to_tracks(detections, dist_fun=colortracker.feature_distance(hue_weight=1),
+tracks = tracker.points_to_tracks(detections, dist_fun=colortracker.feature_distance(hue_weight=2),
                                   similarity_threshold=100)
 np.save(cache_filename, detections)
 

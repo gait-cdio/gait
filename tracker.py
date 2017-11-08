@@ -5,6 +5,8 @@ from collections import namedtuple
 
 PositionData = namedtuple('PositionData', ['x', 'y', 'frame'])
 
+def clamp(n, smallest, largest): return max(smallest, min(n, largest))
+
 class Track:
     def __init__(self, start_frame=None, x=None, y=None, dx=0, dy=0, fps=30, feature=None):
         # State space model
@@ -33,6 +35,7 @@ class Track:
 
         self.current_frame = self.start_frame = start_frame
         self.state_history = []
+        self.score = 1
 
     def update_feature(self, feature = None):
         if feature: self.feature = feature
@@ -68,12 +71,15 @@ def points_to_tracks(detections, dist_fun, similarity_threshold=10000):
     for frame, new_detections in enumerate(detections):
         # Prediction 
         for track in tracks:
-            track.predict()
-            track.update_feature()
+            # Only keep tracking if score is sufficient
+            if track.score > 0:
+                track.predict()
+                track.update_feature()
 
         # If tracks is empty, create new track for each detection
         tracked_detections = [t.feature for t in tracks]
-        match_list = match(tracked_detections, new_detections, dist_fun, similarity_threshold)
+        detection_scores = [t.score for t in tracks]
+        match_list = match(detection_scores, tracked_detections, new_detections, dist_fun, similarity_threshold)
 
         for track_index, detection_index in match_list:
             tracks[track_index].measurement_update(new_detections[detection_index].position)
@@ -83,6 +89,16 @@ def points_to_tracks(detections, dist_fun, similarity_threshold=10000):
         not_found  = list(set(range(0, len(tracks))) -         set([t[0] for t in match_list]))
         new_tracks = list(set(range(0, len(new_detections))) - set([t[1] for t in match_list]))
 
+        # Update score for tracks
+        for track_index, track in enumerate(tracks):
+            if track_index in not_found:
+                track.score -= 1
+            else:
+                track.score += 1
+            # TODO: Clamp score, this is tweakable
+            track.score = clamp(track.score, -2, 8)
+
+        # Add new tracks
         for new in new_tracks:
             x, y = new_detections[new].position
             tracks.append(Track(start_frame=frame, x=x, y=y, feature=new_detections[new]))
@@ -90,12 +106,16 @@ def points_to_tracks(detections, dist_fun, similarity_threshold=10000):
     return tracks
 
 
-def match(list1, list2, dist_fun, similarity_threshold):
+def match(track_scores, list1, list2, dist_fun, similarity_threshold):
     # Create similarity matrix
     sim_mat = np.zeros((len(list1), len(list2)))
     for i, e1 in enumerate(list1):
         for j, e2 in enumerate(list2):
-            sim_mat[i, j] = dist_fun(e1, e2)
+            # If score is invalid, set dist to 'inf' to not match
+            if track_scores[i] <= 0:
+                sim_mat[i, j] = 9999
+            else:
+                sim_mat[i, j] = dist_fun(e1, e2)
 
     # Get match list greedy by always picking the minimum distance
     match_list = []
@@ -105,6 +125,13 @@ def match(list1, list2, dist_fun, similarity_threshold):
         except ValueError:
             break
 
+        # TODO(kevin) add limitation to not match with tracks with scores below 0. Scores of list1 is in 'track_scores'
+        # TODO(kevin) might need to do this limitation already in the distance calculations. Idea might be to do:
+        # TODO(kevin) if track_scores[i] <= 0:
+        # TODO(kevin)   sim_mat[i, j] = inf
+        # TODO(kevin) else
+        # TODO(kevin)   sim_mat[i, j] = dist_fun(e1, e2)
+        # TODO(kevin)
         similarity_score = sim_mat[best_match]
         if similarity_score < similarity_threshold:
             match_list.append(best_match)
