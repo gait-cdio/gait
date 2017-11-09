@@ -75,7 +75,8 @@ else:
     np.save(cache_filename, detections)
 
     # Associate keypoints to form tracks
-tracks = tracker.points_to_tracks(detections, dist_fun=colortracker.feature_distance(hue_weight=2, size_weight=2, time_weight=1),
+tracks = tracker.points_to_tracks(detections,
+                                  dist_fun=colortracker.feature_distance(hue_weight=2, size_weight=2, time_weight=1),
                                   similarity_threshold=140)
 
 # TODO(rolf): make this plotting code prettier
@@ -107,25 +108,30 @@ f, axes = plt.subplots(ncols=2, nrows=2, sharex=True)
 for track_index, point_track in enumerate(tracks):
     updown_estimation = updown_estimations[track_index]
     estdxline = axes[0, 0].plot((1 + track_index) * 1000 * updown_estimation, 'o-', markersize=2,
-                             label='estimated up/down, index ' + str(track_index))
+                                label='estimated up/down, index ' + str(track_index))
     estdyline = axes[0, 1].plot(750 - (1 + track_index) * 100 * updown_estimation, 'o-', markersize=2,
-                             label='estimated up/down, index ' + str(track_index))
+                                label='estimated up/down, index ' + str(track_index))
     derivline = axes[1, 0].plot(range(0, number_frames), x_derivatives[track_index], 'o-', markersize=2)
     t = [state.frame for state in point_track.state_history]
     x = [state.x for state in point_track.state_history]
 
     xline = axes[0, 0].plot(t, x, 'o-', markersize=2, label='x position, index ' + str(track_index))
 
+updown_groundtruth = None
 filename_base = os.path.splitext(args.filename)[0]
 groundtruth_filename = filename_base + '.npy'
 if os.path.isfile(groundtruth_filename):
     footstates = np.load(groundtruth_filename)
     updown_groundtruth = utils.annotationToOneHot(footstates)
 
-    xleftfoot = axes[0, 0].plot(3000 * updown_groundtruth[0, :], 'o-', markersize=2, label='ground truth up/down, left foot')
-    yleftfoot = axes[0, 1].plot(750 - 300 * updown_groundtruth[0, :], 'o-', markersize=2, label='ground truth up/down, left foot')
-    xrightfoot = axes[0, 0].plot(3000 * updown_groundtruth[1, :], 'o-', markersize=2, label='ground truth up/down, right foot')
-    yrightfoot = axes[0, 1].plot(750 - 300 * updown_groundtruth[1, :], 'o-', markersize=2, label='ground truth up/down, right foot')
+    xleftfoot = axes[0, 0].plot(3000 * updown_groundtruth[0, :], 'o-', markersize=2,
+                                label='ground truth up/down, left foot')
+    yleftfoot = axes[0, 1].plot(750 - 300 * updown_groundtruth[0, :], 'o-', markersize=2,
+                                label='ground truth up/down, left foot')
+    xrightfoot = axes[0, 0].plot(3000 * updown_groundtruth[1, :], 'o-', markersize=2,
+                                 label='ground truth up/down, right foot')
+    yrightfoot = axes[0, 1].plot(750 - 300 * updown_groundtruth[1, :], 'o-', markersize=2,
+                                 label='ground truth up/down, right foot')
 else:
     print('WARNING: could not find ground truth for foot up/down')
 
@@ -139,8 +145,13 @@ axes[1, 0].grid(linestyle='-')
 axes[0, 1].invert_yaxis()
 plt.show()
 
-fig = visualize_gait(updown_estimations)
-fig.show()
+gait_cycle_fig = visualize_gait(updown_estimations, label='Estimated')
+
+if updown_groundtruth is not None:
+    visualize_gait(updown_groundtruth, fig=gait_cycle_fig, color='green', offset=-1, label='Ground truth')
+
+gait_cycle_fig.show()
+gait_cycle_fig.gca().legend()
 plt.show()
 
 print('Done and done.')
