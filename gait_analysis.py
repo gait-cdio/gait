@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
+import validator
 from gait_argument_parser import parse_arguments
 
 import tracker
@@ -147,8 +148,25 @@ plt.show()
 
 gait_cycle_fig = visualize_gait(updown_estimations, label='Estimated')
 
+# Validation
+
+num_groundtruth_tracks = updown_groundtruth.shape[0]
+num_estimated_tracks = len(updown_estimations)
+errors = np.zeros((num_groundtruth_tracks, num_estimated_tracks))
+
 if updown_groundtruth is not None:
-    visualize_gait(updown_groundtruth, fig=gait_cycle_fig, color='green', offset=-1, label='Ground truth')
+    for row, groundtruth in enumerate(updown_groundtruth):
+        for col, estimation in enumerate(updown_estimations):
+            errors[row, col] = validator.validate(groundtruth,
+                                                  estimation)
+
+    matches = utils.greedy_similarity_match(errors, similarity_threshold=0.2)
+
+    ordered_groundtruth = [None] * len(matches)
+    for groundtruth_index, estimation_index in matches:
+        ordered_groundtruth[estimation_index] = updown_groundtruth[groundtruth_index]
+
+    visualize_gait(ordered_groundtruth, fig=gait_cycle_fig, color='green', offset=-1, label='Ground truth')
 
 gait_cycle_fig.show()
 gait_cycle_fig.gca().legend()

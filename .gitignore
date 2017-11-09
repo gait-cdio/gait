@@ -1,6 +1,6 @@
 .idea/workspace.xml
 *.avi
-*.npy
+
 *.py[cod]
 
 __pycache__/

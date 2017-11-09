@@ -3,6 +3,8 @@
 import numpy as np
 from collections import namedtuple
 
+from utils import greedy_similarity_match
+
 PositionData = namedtuple('PositionData', ['x', 'y', 'frame'])
 
 def clamp(n, smallest, largest): return max(smallest, min(n, largest))
@@ -106,37 +108,16 @@ def points_to_tracks(detections, dist_fun, similarity_threshold=10000):
     return tracks
 
 
-def match(track_scores, list1, list2, dist_fun, similarity_threshold):
+def match(track_scores, tracks, detections, dist_fun, similarity_threshold):
     # Create similarity matrix
-    sim_mat = np.zeros((len(list1), len(list2)))
-    for i, e1 in enumerate(list1):
-        for j, e2 in enumerate(list2):
+    sim_mat = np.zeros((len(tracks), len(detections)))
+    for i, e1 in enumerate(tracks):
+        for j, e2 in enumerate(detections):
             # If score is invalid, set dist to 'inf' to not match
             if track_scores[i] <= 0:
-                sim_mat[i, j] = 9999
+                sim_mat[i, j] = np.inf
             else:
                 sim_mat[i, j] = dist_fun(e1, e2)
 
-    # Get match list greedy by always picking the minimum distance
-    match_list = []
-    while True:
-        try:
-            best_match = np.unravel_index(np.nanargmin(sim_mat), (len(list1), len(list2)))
-        except ValueError:
-            break
+    return greedy_similarity_match(sim_mat, similarity_threshold)
 
-        # TODO(kevin) add limitation to not match with tracks with scores below 0. Scores of list1 is in 'track_scores'
-        # TODO(kevin) might need to do this limitation already in the distance calculations. Idea might be to do:
-        # TODO(kevin) if track_scores[i] <= 0:
-        # TODO(kevin)   sim_mat[i, j] = inf
-        # TODO(kevin) else
-        # TODO(kevin)   sim_mat[i, j] = dist_fun(e1, e2)
-        # TODO(kevin)
-        similarity_score = sim_mat[best_match]
-        if similarity_score < similarity_threshold:
-            match_list.append(best_match)
-            
-        sim_mat[:, best_match[1]] = np.nan
-        sim_mat[best_match[0], :] = np.nan
-
-    return match_list

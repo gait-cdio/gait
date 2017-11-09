@@ -68,7 +68,7 @@ def estimate_naive(tracks, max_frame, applicability_std=1.3, blur_std=3, up_thre
 
     return estimations, derivatives
 
-def estimate_detrend(tracks, max_frame, applicability_std=1.3, blur_std=0.5, up_thresh=0.25, down_thresh=0.45):
+def estimate_detrend(tracks, max_frame, applicability_std=1.3, blur_std=3, up_thresh=0.25, down_thresh=0.45):
     estimations = []
     derivatives = []
 

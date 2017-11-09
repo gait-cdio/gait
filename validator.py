@@ -1,9 +1,11 @@
 import numpy as np
 
+
 # Vanilla validation
 def validate(ground_truth, estimation):
-    diff=np.sum(np.abs(ground_truth-estimation)) #ignores NaN
-    weight=np.sum(estimation) # ignores NaN using steps are 1
-    return diff/weight
+    diff = np.abs(ground_truth - estimation)
+    diff_sum = np.nansum(diff)
+    weight = len(diff) - np.count_nonzero(np.isnan(diff))
+    return diff_sum/weight
 
 # Land mover distance?
