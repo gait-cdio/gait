@@ -26,7 +26,7 @@ cache_filename = args.filename + '.detections.npy'
 
 if args.cached and os.path.isfile(cache_filename):
     detections = np.load(cache_filename)
-    number_frames = len(detections)
+    number_frames = len(detections) # TODO(rolf): fix a crash in the end my making this actually match the number of frames -- the error is probably because we sometimes can't read the last frame of the video.
 else:
     video_reader = imageio.get_reader(args.filename)
     number_frames = video_reader.get_meta_data()['nframes']

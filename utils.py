@@ -41,8 +41,9 @@ def greedy_similarity_match(sim_mat, similarity_threshold):
         if similarity_score < similarity_threshold:
             match_list.append(best_match)
 
-        sim_mat[:, best_match[1]] = np.nan
-        sim_mat[best_match[0], :] = np.nan
+        row, col = best_match
+        sim_mat[:, col] = np.nan
+        sim_mat[row, :] = np.nan
     return match_list
 
 
