@@ -1,24 +1,19 @@
 import cv2
 import imageio
-import numpy as np
 import matplotlib.pyplot as plt
-import sys
-
-import validator
-from gait_argument_parser import parse_arguments
-
-import tracker
-import utils
+import numpy as np
 import os.path
-from gui import set_threshold
-
-from colortracker import ColorTracker
-import colortracker
-from footupdown import estimate_naive
-from footupdown import estimate_detrend
-from tracker import Track, match
 from scipy import signal
 
+import colortracker
+import tracker
+import utils
+import validator
+from colortracker import ColorTracker
+from footupdown import estimate_detrend
+from gait_argument_parser import parse_arguments
+from gui import set_threshold
+from utils import load_groundtruth
 from visualize_gait import visualize_gait
 
 args = parse_arguments()
@@ -121,9 +116,9 @@ for track_index, point_track in enumerate(tracks):
 updown_groundtruth = None
 filename_base = os.path.splitext(args.filename)[0]
 groundtruth_filename = filename_base + '.npy'
+
 if os.path.isfile(groundtruth_filename):
-    footstates = np.load(groundtruth_filename)
-    updown_groundtruth = utils.annotationToOneHot(footstates)
+    updown_groundtruth = load_groundtruth(groundtruth_filename)
 
     xleftfoot = axes[0, 0].plot(3000 * updown_groundtruth[0, :], 'o-', markersize=2,
                                 label='ground truth up/down, left foot')

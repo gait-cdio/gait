@@ -1,19 +1,28 @@
 import numpy as np
 
-def annotationToOneHot(anno):
+
+def annotationToUpDown(annotations):
+    """ Convert ground truth annotations to a matrix of 1s and 0s.
+    The first row of the matrix is the left foot,
+    the second is the right foot.
+    A value of 1 means the foot is up, 0 means it is down.
+
+    :param annotations:
+    :return: np.ndarray
+    """
     left = 0
     right = 0
-    bin = np.zeros((2, anno.size))
-    for t in range(anno.size):
-        if anno[t] == 1:
+    bin = np.zeros((2, annotations.size))
+    for t in range(annotations.size):
+        if annotations[t] == 1:
             left = 1
-        if anno[t] == 2:
+        if annotations[t] == 2:
             left = 0
-        if anno[t] == 3:
+        if annotations[t] == 3:
             right = 1
-        if anno[t] == 4:
+        if annotations[t] == 4:
             right = 0
-        bin[0,t]=left
+        bin[0, t] = left
         bin[1, t] = right
     return bin
 
@@ -35,3 +44,8 @@ def greedy_similarity_match(sim_mat, similarity_threshold):
         sim_mat[:, best_match[1]] = np.nan
         sim_mat[best_match[0], :] = np.nan
     return match_list
+
+
+def load_groundtruth(filename):
+    footstates = np.load(filename)
+    return annotationToUpDown(footstates)
