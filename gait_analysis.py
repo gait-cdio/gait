@@ -157,8 +157,7 @@ errors = np.zeros((num_groundtruth_tracks, num_estimated_tracks))
 if updown_groundtruth is not None:
     for row, groundtruth in enumerate(updown_groundtruth):
         for col, estimation in enumerate(updown_estimations):
-            errors[row, col] = validator.validate(groundtruth,
-                                                  estimation)
+            errors[row, col] = validator.validate(groundtruth, estimation)
 
     matches = utils.greedy_similarity_match(errors, similarity_threshold=0.2)
 

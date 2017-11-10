@@ -115,7 +115,7 @@ def match(track_scores, tracks, detections, dist_fun, similarity_threshold):
         for j, e2 in enumerate(detections):
             # If score is invalid, set dist to 'inf' to not match
             if track_scores[i] <= 0:
-                sim_mat[i, j] = np.inf
+                sim_mat[i, j] = 1_000_000_000
             else:
                 sim_mat[i, j] = dist_fun(e1, e2)
 
