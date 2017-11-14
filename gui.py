@@ -1,15 +1,19 @@
 import cv2
 import numpy as np
-
+from collections import namedtuple
 #TODO(John):
 # Möjligör flera olika trösklar
 # Bättre utnyttjade av klicket i bilden
+# Använda QT istället för openCVs GUI. openCV GUIt ska egentligen inte användas till mer än debugging. Därför finns ingen support för knappar o.s.v.
 
+#markerThreshold = namedtuple('markerThreshold', 'jointName lowerBound upperBound') # Tänker mig en sån här grej för att spara värden
 
 class WindowGUI: #Klass som innehåller information för GUI:t
     def __init__(self, video_reader):
         self.windowName = 'Choose HSV threshold'
         self.maskedWindow = 'MaskedIm'
+
+        self.multipleBounds = False
         self.lowerBound = np.array([140, 100, 100])
         self.higherBound = np.array([180, 255, 255])
 

@@ -3,6 +3,8 @@ import imageio
 import matplotlib.pyplot as plt
 import numpy as np
 import os.path
+from imageio.core import CannotReadFrameError
+from recordclass import recordclass
 from scipy import signal
 
 import colortracker
@@ -20,13 +22,17 @@ args = parse_arguments()
 
 plt.ioff()
 
+TrackerResults = recordclass('TrackerResults', ['tracker', 'detections', 'tracks'])
+
 # Load videostream
 # video_stream = load_video() | stream_from_webcam()
-cache_filename = args.filename + '.detections.npy'
+cache_filename = args.filename + '.trackerResults.npy'
+trackerList = []
 
 if args.cached and os.path.isfile(cache_filename):
-    detections = np.load(cache_filename)
-    number_frames = len(detections) # TODO(rolf): fix a crash in the end my making this actually match the number of frames -- the error is probably because we sometimes can't read the last frame of the video.
+    loaded_detections = np.load(cache_filename)
+    trackerList = [TrackerResults(tracker=None, detections=detections, tracks=[]) for detections in loaded_detections]
+    number_frames = len(loaded_detections[0])
 else:
     video_reader = imageio.get_reader(args.filename)
     number_frames = video_reader.get_meta_data()['nframes']
@@ -36,44 +42,52 @@ else:
     # Maybe prompt user to select colors, regions, etc.
     # Create instances of necessary classes (SimpleBlobDetector, TrackerKCF, etc.)
 
-    keypoint_tracker = ColorTracker()
-    keypoint_tracker.hsv_min, keypoint_tracker.hsv_max = set_threshold(video_reader)
+    for i in range(args.numOfTrackers):
+        keypoint_tracker = ColorTracker()
+        keypoint_tracker.hsv_min, keypoint_tracker.hsv_max = set_threshold(video_reader)
+        trackerList.append(TrackerResults(tracker=keypoint_tracker, detections=[], tracks=[]))
 
     font = cv2.FONT_HERSHEY_TRIPLEX
 
     paused = False
 
     # Detect keypoints (heel, toe) in each frame
-    detections = []
-    frame_nr = 0
-    try:
-        for frame_nr, img_rgb in enumerate(video_reader):
-            img = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
-            cv2.putText(img, str(frame_nr), (10, 30), fontFace=font, fontScale=1, color=(0, 0, 255))
-            detections_for_frame = keypoint_tracker.detect(img, frame_nr)
-            detections.append(detections_for_frame)
 
-            if paused:
-                delay = 0
-            else:
-                delay = 1
+    for frame_nr, img_rgb in enumerate(video_reader):
+        img = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+        #cv2.putText(img, str(frame_nr), (10, 30), fontFace=font, fontScale=1, color=(0, 0, 255))
 
-            pressed_key = cv2.waitKey(delay) & 0xFF
-            if pressed_key == ord(' '):
-                paused = not paused
-            elif pressed_key == ord('q'):
-                break
-            frame_nr += 1
-    except(RuntimeError):
-        print("Video has finished?")
-    keypoint_tracker.cleanup_windows()
+        for trackerResult in trackerList:
+            detections_for_frame = trackerResult.tracker.detect(img, frame_nr, visualize = False)
+            trackerResult.detections.append(detections_for_frame)
 
-    np.save(cache_filename, detections)
+        if paused:
+            delay = 0
+        else:
+            delay = 1
 
-    # Associate keypoints to form tracks
-tracks = tracker.points_to_tracks(detections,
-                                  dist_fun=colortracker.feature_distance(hue_weight=2, size_weight=2, time_weight=1),
-                                  similarity_threshold=140)
+        pressed_key = cv2.waitKey(delay) & 0xFF
+        if pressed_key == ord(' '):
+            paused = not paused
+        elif pressed_key == ord('q'):
+            break
+
+    for trackerResult in trackerList:
+        trackerResult.tracker.cleanup_windows()
+        missing_frames = max(number_frames - len(trackerResult.detections), 0)
+        trackerResult.detections += [[]] * missing_frames
+    np.save(cache_filename, [trackerResult.detections for trackerResult in trackerList])
+
+# Associate keypoints to form tracks
+
+tracks = []
+
+for trackerResult in trackerList:
+    trackerResult.tracks = tracker.points_to_tracks(trackerResult.detections,
+                                         dist_fun=colortracker.feature_distance(hue_weight=2, size_weight=2,
+                                                                                time_weight=1),
+                                         similarity_threshold=140)
+    tracks += trackerResult.tracks
 
 # TODO(rolf): make this plotting code prettier
 

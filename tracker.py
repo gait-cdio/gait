@@ -14,7 +14,7 @@ class Track:
         # State space model
         # x = Fx + bu
         # y = Hx + du
-
+        self.fps = fps
         self.dt = 1.0/fps
 
         self.x = np.matrix([[x], [dx], [y], [dy]], dtype=float)
@@ -105,7 +105,9 @@ def points_to_tracks(detections, dist_fun, similarity_threshold=10000):
             x, y = new_detections[new].position
             tracks.append(Track(start_frame=frame, x=x, y=y, feature=new_detections[new]))
 
-    return tracks
+    not_too_short_tracks = list(filter(lambda track: len(track.state_history) > track.fps, tracks))
+
+    return not_too_short_tracks
 
 
 def match(track_scores, tracks, detections, dist_fun, similarity_threshold):

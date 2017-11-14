@@ -27,7 +27,8 @@ def annotationToUpDown(annotations):
     return bin
 
 
-def greedy_similarity_match(sim_mat, similarity_threshold):
+def greedy_similarity_match(input_mat, similarity_threshold):
+    sim_mat = np.copy(input_mat)
     # Get match list greedy by always picking the minimum distance
     match_list = []
     rows, cols = sim_mat.shape

@@ -49,7 +49,10 @@ class ColorTracker:
 
         self.variance_threshold = 20 ** 2
 
-    def detect(self, img, frame_nr):
+    def detect(self, img, frame_nr, visualize = True):
+
+        self.visualize_keypoints = visualize
+
         if self.median_filter:
             blurred_img = cv2.medianBlur(img, 3)
             hsv = cv2.cvtColor(blurred_img, cv2.COLOR_BGR2HSV)
