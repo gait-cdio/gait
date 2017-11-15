@@ -5,7 +5,7 @@ from collections import namedtuple
 
 from utils import greedy_similarity_match
 
-PositionData = namedtuple('PositionData', ['x', 'y', 'frame'])
+PositionData = namedtuple('PositionData', ['x', 'y', 'frame', 'observed'])
 
 def clamp(n, smallest, largest): return max(smallest, min(n, largest))
 
@@ -59,12 +59,16 @@ class Track:
     def predict(self):
         x = self.x; F = self.F; P = self.P; Q = self.Q
 
-        old_position = x[0, 0], x[2, 0]
         self.x = F*x
         self.P = F*P*F.transpose() + Q
-        self.state_history.append(PositionData(x=old_position[0], y=old_position[1], frame=self.current_frame))
 
         self.current_frame += 1
+
+    def save_state_to_history(self, was_observation):
+        position = self.x[0, 0], self.x[2, 0]
+        self.state_history.append(
+            PositionData(x=position[0], y=position[1], frame=self.current_frame, observed=was_observation))
+
 
 
 def points_to_tracks(detections, dist_fun, similarity_threshold=10000):
@@ -95,10 +99,13 @@ def points_to_tracks(detections, dist_fun, similarity_threshold=10000):
         for track_index, track in enumerate(tracks):
             if track_index in not_found:
                 track.score -= 1
+                was_observation = False
             else:
                 track.score += 1
+                was_observation = True
             # TODO: Clamp score, this is tweakable
             track.score = clamp(track.score, -2, 8)
+            track.save_state_to_history(was_observation)
 
         # Add new tracks
         for new in new_tracks:

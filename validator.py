@@ -8,4 +8,10 @@ def validate(ground_truth, estimation):
     weight = len(diff) - np.count_nonzero(np.isnan(diff))
     return diff_sum/weight
 
+def error(ground_truth, estimation, nan_penalty):
+    diff = np.abs(ground_truth - estimation)
+    diff_sum = np.nansum(diff)
+    numNaN=np.count_nonzero(np.isnan(estimation))
+    return (diff_sum + nan_penalty * numNaN)/len(ground_truth)
+
 # Land mover distance?

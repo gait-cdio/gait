@@ -3,14 +3,20 @@ import cv2
 import imageio
 import os
 from copy import copy
+import imageio
 
 video_name= '4farger.mp4'
-cap = cv2.VideoCapture(video_name)
+cap = cv2.VideoCapture('input-videos/' + video_name)
 width=int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 height=int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-nframes = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+nframes = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) + 1
 fps = cap.get(cv2.CAP_PROP_FPS)
 
+video_reader = imageio.get_reader('input-videos/'  + video_name)
+number_frames = video_reader.get_meta_data()['nframes']
+
+print('cv2:' + str(nframes))
+print('imageio:' + str(number_frames))
 
 cv2.namedWindow('Gait Annotator',cv2.WINDOW_NORMAL)
 cv2.resizeWindow('Gait Annotator', width,height)
@@ -37,7 +43,7 @@ while loop:
     while True:
         pressed_key = cv2.waitKey(50) & 0xFF
         if pressed_key == ord('d'):
-            if frame < nframes-1:
+            if frame < nframes:
                 frame = frame + 1
                 ret, clean_im=cap.read()
         elif pressed_key == ord('a'):
@@ -111,7 +117,7 @@ while loop:
     while True:
         pressed_key = cv2.waitKey(0) & 0xFF
         if pressed_key == ord('d'):
-            if frame < nframes-1:
+            if frame < nframes:
                 frame = frame + 1
                 ret, clean_im=cap.read()
         elif pressed_key == ord('a'):
@@ -172,7 +178,7 @@ while loop:
         if pressed_key == 255: #no key return
             break
         if pressed_key == ord('d'):
-            if frame < nframes - 1:
+            if frame < nframes:
                 frame = frame + 1
                 ret, clean_im = cap.read()
         elif pressed_key == ord('a'):
@@ -228,7 +234,7 @@ while loop:
     while True:
         pressed_key = cv2.waitKey(0) & 0xFF
         if pressed_key == ord('d'):
-            if frame < nframes - 1:
+            if frame < nframes:
                 frame = frame + 1
                 ret, clean_im = cap.read()
         elif pressed_key == ord('a'):
