@@ -4,3 +4,5 @@
 *.py[cod]
 
 __pycache__/
+
+*.npy
