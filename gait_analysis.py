@@ -129,7 +129,7 @@ for track_index, point_track in enumerate(tracks):
 
 updown_groundtruth = None
 filename_base = os.path.splitext(args.filename)[0]
-groundtruth_filename = filename_base + '.npy'
+groundtruth_filename = 'annotations/' + filename_base + '-up_down.npy'
 
 if os.path.isfile(groundtruth_filename):
     updown_groundtruth = load_groundtruth(groundtruth_filename)
@@ -155,7 +155,6 @@ axes[1, 0].grid(linestyle='-')
 axes[0, 1].invert_yaxis()
 plt.show()
 
-gait_cycle_fig = visualize_gait(updown_estimations, label='Estimated')
 
 # Validation
 
@@ -170,11 +169,21 @@ if updown_groundtruth is not None:
 
     matches = utils.greedy_similarity_match(errors, similarity_threshold=0.2)
 
-    ordered_groundtruth = [None] * len(matches)
+    ordered_groundtruth = []
+    ordered_estimations = []
+    matched_estimation_indices = []
     for groundtruth_index, estimation_index in matches:
-        ordered_groundtruth[estimation_index] = updown_groundtruth[groundtruth_index]
+        ordered_groundtruth.append(updown_groundtruth[groundtruth_index])
+        ordered_estimations.append(updown_estimations[estimation_index])
+        matched_estimation_indices.append(estimation_index)
 
-    visualize_gait(ordered_groundtruth, fig=gait_cycle_fig, color='green', offset=-1, label='Ground truth')
+    unmatched_estimation_indices = list(set(range(len(updown_estimations))) - set(matched_estimation_indices))
+    ordered_estimations += [updown_estimations[index] for index in unmatched_estimation_indices]
+
+    gait_cycle_fig = visualize_gait(ordered_groundtruth, color='green', offset=-1, label='Ground truth')
+    visualize_gait(ordered_estimations, fig=gait_cycle_fig, label='Estimated')
+else:
+    gait_cycle_fig = visualize_gait(updown_estimations, label='Estimated')
 
 gait_cycle_fig.show()
 gait_cycle_fig.gca().legend()
