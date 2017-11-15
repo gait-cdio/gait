@@ -26,7 +26,7 @@ TrackerResults = recordclass('TrackerResults', ['tracker', 'detections', 'tracks
 
 # Load videostream
 # video_stream = load_video() | stream_from_webcam()
-cache_filename = args.filename + '.trackerResults.npy'
+cache_filename = 'TrackerResults/' + args.filename + '.trackerResults.npy'
 trackerList = []
 
 if args.cached and os.path.isfile(cache_filename):
@@ -34,7 +34,7 @@ if args.cached and os.path.isfile(cache_filename):
     trackerList = [TrackerResults(tracker=None, detections=detections, tracks=[]) for detections in loaded_detections]
     number_frames = len(loaded_detections[0])
 else:
-    video_reader = imageio.get_reader(args.filename)
+    video_reader = imageio.get_reader('input-videos/' + args.filename)
     number_frames = video_reader.get_meta_data()['nframes']
 
     # Initialize stuff
@@ -58,7 +58,7 @@ else:
         #cv2.putText(img, str(frame_nr), (10, 30), fontFace=font, fontScale=1, color=(0, 0, 255))
 
         for trackerResult in trackerList:
-            detections_for_frame = trackerResult.tracker.detect(img, frame_nr, visualize = False)
+            detections_for_frame = trackerResult.tracker.detect(img, frame_nr, visualize = True)
             trackerResult.detections.append(detections_for_frame)
 
         if paused:
@@ -89,7 +89,7 @@ for trackerResult in trackerList:
                                          similarity_threshold=140)
     tracks += trackerResult.tracks
 
-# TODO(rolf): make this plotting code prettier
+# TODO(rolf): make this plotting code more pretty
 
 fig, axes = plt.subplots(ncols=2, sharex=True)
 
@@ -165,9 +165,9 @@ errors = np.zeros((num_groundtruth_tracks, num_estimated_tracks))
 if updown_groundtruth is not None:
     for row, groundtruth in enumerate(updown_groundtruth):
         for col, estimation in enumerate(updown_estimations):
-            errors[row, col] = validator.validate(groundtruth, estimation)
+            errors[row, col] = validator.error(groundtruth, estimation, 0.1)
 
-    matches = utils.greedy_similarity_match(errors, similarity_threshold=0.2)
+    matches = utils.greedy_similarity_match(errors, similarity_threshold=0.3)
 
     ordered_groundtruth = []
     ordered_estimations = []
