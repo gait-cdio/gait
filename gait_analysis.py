@@ -76,7 +76,7 @@ else:
     for frame_nr in range(number_frames):
         cap.set(1,frame_nr)
         ret, img = cap.read()
-        #img = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+
         #cv2.putText(img, str(frame_nr), (10, 30), fontFace=font, fontScale=1, color=(0, 0, 255))
 
         for trackerResult in trackerList:

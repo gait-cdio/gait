@@ -1,5 +1,5 @@
 import numpy as np
-
+from enum import Enum
 
 def annotationToUpDown(annotations):
     """ Convert ground truth annotations to a matrix of 1s and 0s.
@@ -26,6 +26,9 @@ def annotationToUpDown(annotations):
         bin[1, t] = right
     return bin
 
+class Direction(Enum):  # general_direction is using the representation of numbers at the moment
+    right = 1
+    left = 0
 
 def greedy_similarity_match(input_mat, similarity_threshold):
     sim_mat = np.copy(input_mat)
