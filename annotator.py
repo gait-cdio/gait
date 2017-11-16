@@ -1,25 +1,28 @@
 import numpy as np
 import cv2
-import imageio
 import os
-from copy import copy
-import imageio
+
 
 video_name= '4farger.mp4'
 cap = cv2.VideoCapture('input-videos/' + video_name)
 width=int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 height=int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-nframes = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) + 1
+nframes = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 fps = cap.get(cv2.CAP_PROP_FPS)
 
-video_reader = imageio.get_reader('input-videos/'  + video_name)
-number_frames = video_reader.get_meta_data()['nframes']
-
-print('cv2:' + str(nframes))
-print('imageio:' + str(number_frames))
 
 cv2.namedWindow('Gait Annotator',cv2.WINDOW_NORMAL)
 cv2.resizeWindow('Gait Annotator', width,height)
+
+f=cv2.waitKey(0)
+print(f)
+b=cv2.waitKey(0)
+print(b)
+h=cv2.waitKey(0)
+print(h)
+f=cv2.waitKey(0)
+print(f)
+
 font = cv2.FONT_HERSHEY_TRIPLEX
 frame=0
 annotations = np.zeros(shape=nframes,dtype='uint8')
@@ -29,12 +32,12 @@ loop = True
 cap.set(1, frame)
 ret, clean_im = cap.read()
 while loop:
-    im=copy(clean_im)
+    im=np.copy(clean_im)
     cv2.putText(im, 'Step: a,d', (0, 10), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'To start: e', (0, 40), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'Quit: q', (0, 25), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'Reset r', (0, 55), fontFace=font, fontScale=0.5, color=(0, 0, 255))
-    cv2.putText(im, 'Save s', (0, 70), fontFace=font, fontScale=0.5, color=(0, 0, 255))
+    cv2.putText(im,  'Save S (shift + s)', (0, 70), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'Mark: i,k,o,l,p', (0, 85), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'Frame:' + str(frame), (0, 100), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     if annotations[frame] != 0:
@@ -69,7 +72,7 @@ while loop:
             annotations[frame]= 4
         elif pressed_key == ord('p'):
             annotations[frame]= 0
-        elif pressed_key == ord('s'):
+        elif pressed_key == ord('S'):
             np.save('annotations/' + os.path.splitext(video_name)[0] + '-up_down', annotations)
         else:
             continue
@@ -104,7 +107,7 @@ loop=True
 cap.set(1, frame)
 ret, clean_im = cap.read()
 while loop:
-    im=copy(clean_im)
+    im=np.copy(clean_im)
     cv2.putText(im, 'Step: a,d', (0, 10), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'To start: e', (0, 40), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'Quit: q', (0, 25), fontFace=font, fontScale=0.5, color=(0, 0, 255))
@@ -157,12 +160,12 @@ loop=True
 cap.set(1, frame)
 ret, clean_im = cap.read()
 while loop:
-    im=copy(clean_im)
+    im=np.copy(clean_im)
     cv2.putText(im, 'Step: a,d', (0, 10), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'To start: e', (0, 40), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'Quit: q', (0, 25), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'Reset r', (0, 55), fontFace=font, fontScale=0.5, color=(0, 0, 255))
-    cv2.putText(im, 'Save s', (0, 70), fontFace=font, fontScale=0.5, color=(0, 0, 255))
+    cv2.putText(im,  'Save S (shift + s)', (0, 70), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'Mark: Mouseclick', (0, 85), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'Change markers: i,k,o,l,p', (0, 100), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'Frame:' + str(frame), (0, 115), fontFace=font, fontScale=0.5, color=(0, 0, 255))
@@ -204,7 +207,7 @@ while loop:
             marked = 4
         elif pressed_key == ord('p'):
             pos_anno[:,frame,:]=0
-        elif pressed_key == ord('s'):
+        elif pressed_key == ord('S'):
             np.save('annotations/' + os.path.splitext(video_name)[0] + '-positions', pos_anno)
         else:
             continue
@@ -221,7 +224,7 @@ loop=True
 cap.set(1, frame)
 ret, clean_im = cap.read()
 while loop:
-    im=copy(clean_im)
+    im=np.copy(clean_im)
     cv2.putText(im, 'Step: a,d', (0, 10), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'To start: e', (0, 40), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'Quit: q', (0, 25), fontFace=font, fontScale=0.5, color=(0, 0, 255))
