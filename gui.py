@@ -9,13 +9,18 @@ from collections import namedtuple
 #markerThreshold = namedtuple('markerThreshold', 'jointName lowerBound upperBound') # Tänker mig en sån här grej för att spara värden
 
 class WindowGUI: #Klass som innehåller information för GUI:t
-    def __init__(self, video_reader):
+    def __init__(self, video_reader, init_thresholds=None):
         self.windowName = 'Choose HSV threshold'
         self.maskedWindow = 'MaskedIm'
 
         self.multipleBounds = False
-        self.lowerBound = np.array([140, 100, 100])
-        self.higherBound = np.array([180, 255, 255])
+
+        if(init_thresholds):
+            self.lowerBound = init_thresholds[0]
+            self.higherBound = init_thresholds[1]
+        else:
+            self.lowerBound = np.array([140, 100, 100])
+            self.higherBound = np.array([180, 255, 255])
 
         cv2.namedWindow(self.windowName, cv2.WINDOW_NORMAL)
         cv2.resizeWindow(self.windowName, 500, 500)
@@ -96,8 +101,8 @@ def mouseCallback(event, x, y, flags, w):
                 w.updateTrackbars()
 
 
-def set_threshold(video_reader):
-    w = WindowGUI(video_reader)
+def set_threshold(video_reader, init_thresholds=None):
+    w = WindowGUI(video_reader, init_thresholds)
 
     cv2.createTrackbar('Hue lower threshold', w.windowName,  140, 180, w.hlowCallback)
     cv2.createTrackbar('Hue higher threshold', w.windowName, 180, 180, w.hhighCallback)

@@ -6,6 +6,7 @@ import os.path
 from imageio.core import CannotReadFrameError
 from recordclass import recordclass
 from scipy import signal
+import pickle
 
 import colortracker
 import tracker
@@ -17,6 +18,9 @@ from gait_argument_parser import parse_arguments
 from gui import set_threshold
 from utils import load_groundtruth
 from visualize_gait import visualize_gait
+
+if not os.path.exists('hsv-threshold-settings'):
+    os.makedirs('hsv-threshold-settings')
 
 args = parse_arguments()
 
@@ -45,9 +49,25 @@ else:
     # Maybe prompt user to select colors, regions, etc.
     # Create instances of necessary classes (SimpleBlobDetector, TrackerKCF, etc.)
     for i in range(args.numOfTrackers):
+        # Check if there are any saved values for thresholds and load it
+        basename = os.path.splitext(os.path.basename(args.filename))[0]
+        threshold_file = ('hsv-threshold-settings/' + 
+                          basename + '-' + 'threshold' + str(i) + '.pkl')
+        try:
+            with open(threshold_file, 'rb') as f:
+                default_thresholds = pickle.load(f)
+        except FileNotFoundError:
+            default_thresholds = None
+
         keypoint_tracker = ColorTracker()
-        keypoint_tracker.hsv_min, keypoint_tracker.hsv_max = set_threshold(video_reader)
+        thresholds = set_threshold(video_reader, default_thresholds)
+        keypoint_tracker.hsv_min, keypoint_tracker.hsv_max = thresholds
+
         trackerList.append(TrackerResults(tracker=keypoint_tracker, detections=[], tracks=[]))
+
+        # Save threshold settings
+        with open(threshold_file, 'wb') as f:
+            pickle.dump(thresholds, f)
 
     font = cv2.FONT_HERSHEY_TRIPLEX
 
@@ -86,7 +106,8 @@ tracks = []
 
 for trackerResult in trackerList:
     trackerResult.tracks = tracker.points_to_tracks(trackerResult.detections,
-                                         dist_fun=colortracker.feature_distance(hue_weight=2, size_weight=2,
+                                         dist_fun=colortracker.feature_distance(hue_weight=2, 
+                                                                                size_weight=2,
                                                                                 time_weight=1),
                                          similarity_threshold=140)
     tracks += trackerResult.tracks
