@@ -6,6 +6,7 @@ import os.path
 from imageio.core import CannotReadFrameError
 from recordclass import recordclass
 from scipy import signal
+import pickle
 
 import colortracker
 import tracker
@@ -44,9 +45,22 @@ else:
     # Create instances of necessary classes (SimpleBlobDetector, TrackerKCF, etc.)
 
     for i in range(args.numOfTrackers):
+        # Check if there are any saved values for thresholds and load it
+        try:
+            with open('hsv-threshold-settings/threshold' + str(i) + '.pkl','rb') as f:
+                default_thresholds = pickle.load(f)
+        except FileNotFoundError:
+            default_thresholds = None
+
         keypoint_tracker = ColorTracker()
-        keypoint_tracker.hsv_min, keypoint_tracker.hsv_max = set_threshold(video_reader)
+        thresholds = set_threshold(video_reader, default_thresholds)
+        keypoint_tracker.hsv_min, keypoint_tracker.hsv_max = thresholds
+
         trackerList.append(TrackerResults(tracker=keypoint_tracker, detections=[], tracks=[]))
+
+        # Save threshold settings
+        with open('hsv-threshold-settings/threshold' + str(i) + '.pkl','wb') as f:
+            pickle.dump(thresholds, f)
 
     font = cv2.FONT_HERSHEY_TRIPLEX
 
