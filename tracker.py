@@ -113,6 +113,7 @@ def points_to_tracks(detections, dist_fun, similarity_threshold=10000):
         for new in new_tracks:
             x, y = new_detections[new].position
             tracks.append(Track(start_frame=frame, x=x, y=y, feature=new_detections[new]))
+            tracks[-1].save_state_to_history(was_observation=True)
 
     not_too_short_tracks = list(filter(lambda track: len(track.state_history) > track.fps, tracks))
 
