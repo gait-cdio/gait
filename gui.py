@@ -102,16 +102,22 @@ def mouseCallback(event, x, y, flags, w):
 
 
 def set_threshold(video_reader, init_thresholds=None):
+    if not init_thresholds:
+        init_thresholds = (np.array([140, 100, 100]), np.array([180, 255, 255]))
+
     w = WindowGUI(video_reader, init_thresholds)
+    h_lower = init_thresholds[0][0]; h_upper = init_thresholds[1][0]
+    s_lower = init_thresholds[0][1]; s_upper = init_thresholds[1][1]
+    v_lower = init_thresholds[0][2]; v_upper = init_thresholds[1][2]
 
-    cv2.createTrackbar('Hue lower threshold', w.windowName,  140, 180, w.hlowCallback)
-    cv2.createTrackbar('Hue higher threshold', w.windowName, 180, 180, w.hhighCallback)
+    cv2.createTrackbar('Hue lower threshold', w.windowName,  h_lower, 180, w.hlowCallback)
+    cv2.createTrackbar('Hue higher threshold', w.windowName, h_upper, 180, w.hhighCallback)
 
-    cv2.createTrackbar('Saturation lower threshold', w.windowName, 100, 256, w.slowCallback)
-    cv2.createTrackbar('Saturation higher threshold', w.windowName, 256, 256, w.shighCallback)
+    cv2.createTrackbar('Saturation lower threshold', w.windowName, s_lower, 256, w.slowCallback)
+    cv2.createTrackbar('Saturation higher threshold', w.windowName, s_upper, 256, w.shighCallback)
 
-    cv2.createTrackbar('Value lower threshold', w.windowName, 100, 256, w.vlowCallback)
-    cv2.createTrackbar('Value higher threshold', w.windowName, 256, 256, w.vhighCallback)
+    cv2.createTrackbar('Value lower threshold', w.windowName, v_lower, 256, w.vlowCallback)
+    cv2.createTrackbar('Value higher threshold', w.windowName, v_upper, 256, w.vhighCallback)
     cv2.createTrackbar('Frame', w.windowName, 0, len(video_reader) - 1, w.read_image)
     cv2.setMouseCallback(w.windowName, mouseCallback, w)
 
