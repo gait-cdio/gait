@@ -99,7 +99,8 @@ tracks = []
 
 for trackerResult in trackerList:
     trackerResult.tracks = tracker.points_to_tracks(trackerResult.detections,
-                                         dist_fun=colortracker.feature_distance(hue_weight=2, size_weight=2,
+                                         dist_fun=colortracker.feature_distance(hue_weight=2, 
+                                                                                size_weight=2,
                                                                                 time_weight=1),
                                          similarity_threshold=140)
     tracks += trackerResult.tracks
