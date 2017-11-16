@@ -9,7 +9,7 @@ from collections import namedtuple
 #markerThreshold = namedtuple('markerThreshold', 'jointName lowerBound upperBound') # Tänker mig en sån här grej för att spara värden
 
 class WindowGUI: #Klass som innehåller information för GUI:t
-    def __init__(self, video_reader, init_thresholds=None):
+    def __init__(self, cap, init_thresholds=None):
         self.windowName = 'Choose HSV threshold'
         self.maskedWindow = 'MaskedIm'
 
@@ -25,12 +25,13 @@ class WindowGUI: #Klass som innehåller information för GUI:t
         cv2.namedWindow(self.windowName, cv2.WINDOW_NORMAL)
         cv2.resizeWindow(self.windowName, 500, 500)
 
-        self.video_reader = video_reader
+        self.cap = cap
         self.read_image(frame=0)
         self.mask = np.zeros(np.size(self.bgrIm))
 
     def read_image(self, frame):
-        img = cv2.cvtColor(self.video_reader.get_data(frame), cv2.COLOR_RGB2BGR)
+        self.cap.set(1, frame)
+        ret, img = self.cap.read()
         self.bgrIm = img
         self.hsvIm = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         self.updateWindowImage()
@@ -101,11 +102,11 @@ def mouseCallback(event, x, y, flags, w):
                 w.updateTrackbars()
 
 
-def set_threshold(video_reader, init_thresholds=None):
+def set_threshold(cap, init_thresholds=None):
     if not init_thresholds:
         init_thresholds = (np.array([140, 100, 100]), np.array([180, 255, 255]))
 
-    w = WindowGUI(video_reader, init_thresholds)
+    w = WindowGUI(cap, init_thresholds)
     h_lower = init_thresholds[0][0]; h_upper = init_thresholds[1][0]
     s_lower = init_thresholds[0][1]; s_upper = init_thresholds[1][1]
     v_lower = init_thresholds[0][2]; v_upper = init_thresholds[1][2]
@@ -118,7 +119,7 @@ def set_threshold(video_reader, init_thresholds=None):
 
     cv2.createTrackbar('Value lower threshold', w.windowName, v_lower, 256, w.vlowCallback)
     cv2.createTrackbar('Value higher threshold', w.windowName, v_upper, 256, w.vhighCallback)
-    cv2.createTrackbar('Frame', w.windowName, 0, len(video_reader) - 1, w.read_image)
+    cv2.createTrackbar('Frame', w.windowName, 0, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) - 1, w.read_image)
     cv2.setMouseCallback(w.windowName, mouseCallback, w)
 
     while True:

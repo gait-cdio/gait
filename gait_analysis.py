@@ -1,9 +1,7 @@
 import cv2
-import imageio
 import matplotlib.pyplot as plt
 import numpy as np
 import os.path
-from imageio.core import CannotReadFrameError
 from recordclass import recordclass
 from scipy import signal
 import pickle
@@ -40,8 +38,8 @@ if args.cached and os.path.isfile(detections_filename):
     trackerList = [TrackerResults(tracker=None, detections=detections, tracks=[]) for detections in loaded_detections]
     number_frames = len(loaded_detections[0])
 else:
-    video_reader = imageio.get_reader('input-videos/' + args.filename)
-    number_frames = video_reader.get_meta_data()['nframes']
+    cap = cv2.VideoCapture('input-videos/' + args.filename)
+    number_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
 
     # Initialize stuff
@@ -60,7 +58,7 @@ else:
             default_thresholds = None
 
         keypoint_tracker = ColorTracker()
-        thresholds = set_threshold(video_reader, default_thresholds)
+        thresholds = set_threshold(cap, default_thresholds)
         keypoint_tracker.hsv_min, keypoint_tracker.hsv_max = thresholds
 
         trackerList.append(TrackerResults(tracker=keypoint_tracker, detections=[], tracks=[]))
@@ -75,8 +73,10 @@ else:
 
 
     # Detect keypoints (heel, toe) in each frame
-    for frame_nr, img_rgb in enumerate(video_reader):
-        img = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+    for frame_nr in range(number_frames):
+        cap.set(1,frame_nr)
+        ret, img = cap.read()
+        #img = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
         #cv2.putText(img, str(frame_nr), (10, 30), fontFace=font, fontScale=1, color=(0, 0, 255))
 
         for trackerResult in trackerList:
