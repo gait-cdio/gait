@@ -19,6 +19,9 @@ from gui import set_threshold
 from utils import load_groundtruth
 from visualize_gait import visualize_gait
 
+if not os.path.exists('hsv-threshold-settings'):
+    os.makedirs('hsv-threshold-settings')
+
 args = parse_arguments()
 
 plt.ioff()
@@ -46,8 +49,11 @@ else:
 
     for i in range(args.numOfTrackers):
         # Check if there are any saved values for thresholds and load it
+        basename = os.path.splitext(os.path.basename(args.filename))[0]
+        threshold_file = ('hsv-threshold-settings/' + 
+                          basename + '-' + 'threshold' + str(i) + '.pkl')
         try:
-            with open('hsv-threshold-settings/threshold' + str(i) + '.pkl','rb') as f:
+            with open(threshold_file, 'rb') as f:
                 default_thresholds = pickle.load(f)
         except FileNotFoundError:
             default_thresholds = None
@@ -59,7 +65,7 @@ else:
         trackerList.append(TrackerResults(tracker=keypoint_tracker, detections=[], tracks=[]))
 
         # Save threshold settings
-        with open('hsv-threshold-settings/threshold' + str(i) + '.pkl','wb') as f:
+        with open(threshold_file, 'wb') as f:
             pickle.dump(thresholds, f)
 
     font = cv2.FONT_HERSHEY_TRIPLEX
