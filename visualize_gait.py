@@ -29,6 +29,7 @@ def visualize_gait(gait, fig=None, color='black', offset=0, label=None):
     ax.set_xlim(0, n_frames)
     ax.set_ylim(0, 2*n_gaits+1)
     ax.set_xlabel('Frame')
+    ax.grid(linestyle='-')
 
     for cycle_index, cycle in enumerate(gait_cycle):
         ax.broken_barh(cycle, (offset + 2*cycle_index+1, 1), facecolors=color, label=label)
