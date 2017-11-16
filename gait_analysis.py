@@ -26,11 +26,12 @@ TrackerResults = recordclass('TrackerResults', ['tracker', 'detections', 'tracks
 
 # Load videostream
 # video_stream = load_video() | stream_from_webcam()
-cache_filename = 'TrackerResults/' + args.filename + '.trackerResults.npy'
+detections_filename = 'TrackerResults/' + args.filename + '.detections.npy'
+tracks_filename = 'TrackerResults/' + args.filename + '.tracks.npy'
 trackerList = []
 
-if args.cached and os.path.isfile(cache_filename):
-    loaded_detections = np.load(cache_filename)
+if args.cached and os.path.isfile(detections_filename):
+    loaded_detections = np.load(detections_filename)
     trackerList = [TrackerResults(tracker=None, detections=detections, tracks=[]) for detections in loaded_detections]
     number_frames = len(loaded_detections[0])
 else:
@@ -76,7 +77,7 @@ else:
         trackerResult.tracker.cleanup_windows()
         missing_frames = max(number_frames - len(trackerResult.detections), 0)
         trackerResult.detections += [[]] * missing_frames
-    np.save(cache_filename, [trackerResult.detections for trackerResult in trackerList])
+    np.save(detections_filename, [trackerResult.detections for trackerResult in trackerList])
 
 # Associate keypoints to form tracks
 
@@ -88,6 +89,8 @@ for trackerResult in trackerList:
                                                                                 time_weight=1),
                                          similarity_threshold=140)
     tracks += trackerResult.tracks
+
+np.save(tracks_filename, tracks)
 
 # TODO(rolf): make this plotting code more pretty
 
