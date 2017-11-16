@@ -18,7 +18,7 @@ class TestMatch(unittest.TestCase):
         # Note: the value cannot actually be Inf, because then greedy_similarity_match gets stuck in an infinite loop
         distance_matrix = np.array([
             [0.01, 0.2, 14],
-            [2, 1_000_000_000, 2],
+            [2, 10**9, 2],
             [0.1, 0.4, 0.09],
         ])
         matches = tracker.greedy_similarity_match(distance_matrix, similarity_threshold=1)
