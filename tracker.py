@@ -19,13 +19,13 @@ class Track:
 
         self.x = np.matrix([[x], [dx], [y], [dy]], dtype=float)
 
-        self.F = np.eye(4, dtype=float) # F = 1 dt  0  0
-        self.F[0, 1] = self.dt          #     0  1  0  0
-        self.F[2, 3] = self.dt          #     0  0  1 dt
-                                        #     0  0  0  1
-                                        #
-        self.H = np.matrix([[1,0,0,0],  # H = 1  0  0  0
-                            [0,0,1,0]]) #     0  0  1  0
+        self.F = np.eye(4, dtype=float)  # F = 1 dt  0  0
+        self.F[0, 1] = self.dt           #     0  1  0  0
+        self.F[2, 3] = self.dt           #     0  0  1 dt
+                                         #     0  0  0  1
+                                         #
+        self.H = np.matrix([[1,0,0,0],   # H = 1  0  0  0
+                            [0,0,1,0]])  #     0  0  1  0
 
         # A priori covariance
         self.P = np.asmatrix(np.diag([16, 10000, 16, 10000]), dtype=float)
@@ -77,10 +77,8 @@ def points_to_tracks(detections, dist_fun, similarity_threshold=10000):
     for frame, new_detections in enumerate(detections):
         # Prediction 
         for track in tracks:
-            # Only keep tracking if score is sufficient
-            if track.score > 0:
-                track.predict()
-                track.update_feature()
+            track.predict()
+            track.update_feature()
 
         # If tracks is empty, create new track for each detection
         tracked_detections = [t.feature for t in tracks]
@@ -105,7 +103,11 @@ def points_to_tracks(detections, dist_fun, similarity_threshold=10000):
                 was_observation = True
             # TODO: Clamp score, this is tweakable
             track.score = clamp(track.score, -2, 8)
-            track.save_state_to_history(was_observation)
+
+            # Only save state if score is sufficient
+            if track.score > 0:
+                track.save_state_to_history(was_observation)
+            # TODO(rolf): Kill track when the score is too low?
 
         # Add new tracks
         for new in new_tracks:
