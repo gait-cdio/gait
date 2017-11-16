@@ -30,6 +30,7 @@ detections_filename = 'TrackerResults/' + args.filename + '.detections.npy'
 tracks_filename = 'TrackerResults/' + args.filename + '.tracks.npy'
 trackerList = []
 
+# Cache checks
 if args.cached and os.path.isfile(detections_filename):
     loaded_detections = np.load(detections_filename)
     trackerList = [TrackerResults(tracker=None, detections=detections, tracks=[]) for detections in loaded_detections]
@@ -38,11 +39,11 @@ else:
     video_reader = imageio.get_reader('input-videos/' + args.filename)
     number_frames = video_reader.get_meta_data()['nframes']
 
+
     # Initialize stuff
     # Select marker/-less
     # Maybe prompt user to select colors, regions, etc.
     # Create instances of necessary classes (SimpleBlobDetector, TrackerKCF, etc.)
-
     for i in range(args.numOfTrackers):
         keypoint_tracker = ColorTracker()
         keypoint_tracker.hsv_min, keypoint_tracker.hsv_max = set_threshold(video_reader)
@@ -52,8 +53,8 @@ else:
 
     paused = False
 
-    # Detect keypoints (heel, toe) in each frame
 
+    # Detect keypoints (heel, toe) in each frame
     for frame_nr, img_rgb in enumerate(video_reader):
         img = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
         #cv2.putText(img, str(frame_nr), (10, 30), fontFace=font, fontScale=1, color=(0, 0, 255))
@@ -79,8 +80,8 @@ else:
         trackerResult.detections += [[]] * missing_frames
     np.save(detections_filename, [trackerResult.detections for trackerResult in trackerList])
 
-# Associate keypoints to form tracks
 
+# Associate keypoints to form tracks
 tracks = []
 
 for trackerResult in trackerList:
@@ -92,10 +93,13 @@ for trackerResult in trackerList:
 
 np.save(tracks_filename, tracks)
 
-# TODO(rolf): make this plotting code more pretty
+# TODO(kevin): Find information in tracks to deduce left/right foot and direction they are walking in.
+# TODO(kevin): This info will be used in up/down estimations and plotting later on.
+
+# TODO(rolf): make this plotting code prettier
 
 fig, axes = plt.subplots(ncols=2, sharex=True)
-
+# Plot the detrended coordinates. 1x2 subplots
 for track in tracks:
     t_c = [state.frame for state in track.state_history]
     x_c = [state.x for state in track.state_history]
@@ -109,15 +113,12 @@ plt.show()
 # TODO(rolf): link the subplots in some way to easily see which points correspond,
 # for example by highlighting the same x value in both subplots when hovering a point in one subplot
 
-# Generate foot down/up
-
+# Generate foot down/up, get derivatives
 updown_estimations, x_derivatives = estimate_detrend(tracks, max_frame=number_frames)
 
 # Present results
-
-
 f, axes = plt.subplots(ncols=2, nrows=2, sharex=True)
-
+# Add up/down estimations and derivatives in plots. 2x2 subplots
 for track_index, point_track in enumerate(tracks):
     updown_estimation = updown_estimations[track_index]
     estdxline = axes[0, 0].plot((1 + track_index) * 1000 * updown_estimation, 'o-', markersize=2,
@@ -130,6 +131,8 @@ for track_index, point_track in enumerate(tracks):
 
     xline = axes[0, 0].plot(t, x, 'o-', markersize=2, label='x position, index ' + str(track_index))
 
+
+# If it exists, add ground truth up/down to the subplots.
 updown_groundtruth = None
 filename_base = os.path.splitext(args.filename)[0]
 groundtruth_filename = 'annotations/' + filename_base + '-up_down.npy'
@@ -148,6 +151,7 @@ if os.path.isfile(groundtruth_filename):
 else:
     print('WARNING: could not find ground truth for foot up/down')
 
+# Style choices
 axes[0, 0].legend()
 axes[0, 1].legend()
 
@@ -160,18 +164,21 @@ plt.show()
 
 
 # Validation
-
+# Better visualization of up/down estimation compared to ground truth. 1x1 plot
 num_groundtruth_tracks = updown_groundtruth.shape[0]
 num_estimated_tracks = len(updown_estimations)
 errors = np.zeros((num_groundtruth_tracks, num_estimated_tracks))
 
+# If we have ground truth, sort both lists according to which match the best before visualizing
 if updown_groundtruth is not None:
     for row, groundtruth in enumerate(updown_groundtruth):
         for col, estimation in enumerate(updown_estimations):
             errors[row, col] = validator.error(groundtruth, estimation, 0.1)
 
+    # Find similarity pairs
     matches = utils.greedy_similarity_match(errors, similarity_threshold=0.3)
 
+    # Build new lists with the correct order for each pair in 'matches'
     ordered_groundtruth = []
     ordered_estimations = []
     matched_estimation_indices = []
@@ -180,12 +187,15 @@ if updown_groundtruth is not None:
         ordered_estimations.append(updown_estimations[estimation_index])
         matched_estimation_indices.append(estimation_index)
 
+    # Find the set of estimations without a ground truth correspondance and add them last in the list
     unmatched_estimation_indices = list(set(range(len(updown_estimations))) - set(matched_estimation_indices))
     ordered_estimations += [updown_estimations[index] for index in unmatched_estimation_indices]
 
+    # Visualize it
     gait_cycle_fig = visualize_gait(ordered_groundtruth, color='green', offset=-1, label='Ground truth')
     visualize_gait(ordered_estimations, fig=gait_cycle_fig, label='Estimated')
 else:
+    # Visualize without ground truth
     gait_cycle_fig = visualize_gait(updown_estimations, label='Estimated')
 
 gait_cycle_fig.show()
