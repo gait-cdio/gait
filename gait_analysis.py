@@ -21,6 +21,7 @@ utils.create_necessary_dirs(['hsv-threshold-settings',
                              'annotations', 
                              'input-videos',
                              'output-videos',
+                             'output-data',
                              'TrackerResults'])
 
 args = parse_arguments()
@@ -29,8 +30,6 @@ plt.ioff()
 
 TrackerResults = recordclass('TrackerResults', ['tracker', 'detections', 'tracks'])
 
-# Load videostream
-# video_stream = load_video() | stream_from_webcam()
 detections_filename = 'TrackerResults/' + args.filename + '.detections.npy'
 tracks_filename = 'TrackerResults/' + args.filename + '.tracks.npy'
 trackerList = []
@@ -44,7 +43,9 @@ else:
     cap = cv2.VideoCapture('input-videos/' + args.filename)
     number_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-
+    # +-----------------------------------------------------------------------+ 
+    # |                         Initialize trackers                           |
+    # +-----------------------------------------------------------------------+ 
     # Initialize stuff
     # Select marker/-less
     # Maybe prompt user to select colors, regions, etc.
@@ -75,6 +76,9 @@ else:
     paused = False
 
 
+    # +-----------------------------------------------------------------------+ 
+    # |                          Detect keypoints                             |
+    # +-----------------------------------------------------------------------+ 
     # Detect keypoints (heel, toe) in each frame
     for frame_nr in range(number_frames):
         cap.set(1,frame_nr)
@@ -97,6 +101,9 @@ else:
         elif pressed_key == ord('q'):
             break
 
+    # +-----------------------------------------------------------------------+ 
+    # |                         Handle missing frames                         |
+    # +-----------------------------------------------------------------------+ 
     for trackerResult in trackerList:
         trackerResult.tracker.cleanup_windows()
         missing_frames = max(number_frames - len(trackerResult.detections), 0)
@@ -104,9 +111,10 @@ else:
     np.save(detections_filename, [trackerResult.detections for trackerResult in trackerList])
 
 
-# Associate keypoints to form tracks
+# +----------------------------------------------------------------------------+
+# |                   Associate keypoints to form tracks                       |
+# +----------------------------------------------------------------------------+ 
 tracks = []
-
 for trackerResult in trackerList:
     trackerResult.tracks = tracker.points_to_tracks(trackerResult.detections,
                                          dist_fun=colortracker.feature_distance(hue_weight=2, 
@@ -117,13 +125,15 @@ for trackerResult in trackerList:
 
 np.save(tracks_filename, tracks)
 
+
 # TODO(kevin): Find information in tracks to deduce left/right foot and direction they are walking in.
 # TODO(kevin): This info will be used in up/down estimations and plotting later on.
-
 # TODO(rolf): make this plotting code prettier
 
+# +----------------------------------------------------------------------------+
+# |                Plot the detrended coordinates. 1x2 subplots                |
+# +----------------------------------------------------------------------------+ 
 fig, axes = plt.subplots(ncols=2, sharex=True)
-# Plot the detrended coordinates. 1x2 subplots
 for track in tracks:
     t_c = [state.frame for state in track.state_history]
     x_c = [state.x for state in track.state_history]
@@ -137,10 +147,14 @@ plt.show()
 # TODO(rolf): link the subplots in some way to easily see which points correspond,
 # for example by highlighting the same x value in both subplots when hovering a point in one subplot
 
-# Generate foot down/up, get derivatives
+# +----------------------------------------------------------------------------+
+# |                  Generate foot down/up, get derivatives                    |
+# +----------------------------------------------------------------------------+ 
 updown_estimations, x_derivatives = estimate_detrend(tracks, max_frame=number_frames)
 
-# Present results
+# +----------------------------------------------------------------------------+
+# |                              Present results                               |
+# +----------------------------------------------------------------------------+ 
 f, axes = plt.subplots(ncols=2, nrows=2, sharex=True)
 # Add up/down estimations and derivatives in plots. 2x2 subplots
 for track_index, point_track in enumerate(tracks):
