@@ -10,6 +10,7 @@ import colortracker
 import tracker
 import utils
 import validator
+import stride_parameters
 from colortracker import ColorTracker
 from footupdown import estimate_detrend
 from gait_argument_parser import parse_arguments
@@ -239,5 +240,10 @@ else:
 gait_cycle_fig.show()
 gait_cycle_fig.gca().legend()
 plt.show()
+
+# +----------------------------------------------------------------------------+
+# |                     Write stride results to file                           |
+# +----------------------------------------------------------------------------+ 
+dc = stride_parameters.write_gait_parameters_to_file('output-data/gait.yaml', updown_estimations)
 
 print('Done and done.')
