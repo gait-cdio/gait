@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from enum import Enum
 
@@ -54,3 +55,8 @@ def greedy_similarity_match(input_mat, similarity_threshold):
 def load_groundtruth(filename):
     footstates = np.load(filename)
     return annotationToUpDown(footstates)
+
+def create_necessary_dirs(dir_names):
+    for d in dir_names:
+        if not os.path.exists(d):
+            os.makedirs(d)

@@ -17,8 +17,11 @@ from gui import set_threshold
 from utils import load_groundtruth
 from visualize_gait import visualize_gait
 
-if not os.path.exists('hsv-threshold-settings'):
-    os.makedirs('hsv-threshold-settings')
+utils.create_necessary_dirs(['hsv-threshold-settings', 
+                             'annotations', 
+                             'input-videos',
+                             'output-videos',
+                             'TrackerResults'])
 
 args = parse_arguments()
 
