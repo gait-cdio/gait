@@ -1,0 +1,5 @@
+scipy
+recordclass
+matplotlib
+PyYAML
+numpy
