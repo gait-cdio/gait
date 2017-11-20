@@ -1,21 +1,22 @@
 import cv2
 import numpy as np
-from collections import namedtuple
-#TODO(John):
+
+
+# TODO(John):
 # Möjligör flera olika trösklar
 # Bättre utnyttjade av klicket i bilden
 # Använda QT istället för openCVs GUI. openCV GUIt ska egentligen inte användas till mer än debugging. Därför finns ingen support för knappar o.s.v.
 
-#markerThreshold = namedtuple('markerThreshold', 'jointName lowerBound upperBound') # Tänker mig en sån här grej för att spara värden
+# markerThreshold = namedtuple('markerThreshold', 'jointName lowerBound upperBound') # Tänker mig en sån här grej för att spara värden
 
-class WindowGUI: #Klass som innehåller information för GUI:t
+class WindowGUI:  # Klass som innehåller information för GUI:t
     def __init__(self, cap, init_thresholds=None):
         self.windowName = 'Choose HSV threshold'
         self.maskedWindow = 'MaskedIm'
 
         self.multipleBounds = False
 
-        if(init_thresholds):
+        if (init_thresholds):
             self.lowerBound = init_thresholds[0]
             self.higherBound = init_thresholds[1]
         else:
@@ -83,7 +84,7 @@ def mouseCallback(event, x, y, flags, w):
         if x >= 5 and y >= 5:
             floodfill_mask = np.zeros((w.bgrIm.shape[0] + 2, w.bgrIm.shape[1] + 2), dtype=np.uint8)
             hsv = cv2.cvtColor(w.bgrIm, cv2.COLOR_BGR2HSV).astype(np.float32)
-            h = hsv[:,:,0].astype(np.float32)
+            h = hsv[:, :, 0].astype(np.float32)
 
             value_to_write_in_mask = 255
             flags = (value_to_write_in_mask << 8) | cv2.FLOODFILL_MASK_ONLY
@@ -111,7 +112,7 @@ def set_threshold(cap, init_thresholds=None):
     s_lower = init_thresholds[0][1]; s_upper = init_thresholds[1][1]
     v_lower = init_thresholds[0][2]; v_upper = init_thresholds[1][2]
 
-    cv2.createTrackbar('Hue lower threshold', w.windowName,  h_lower, 180, w.hlowCallback)
+    cv2.createTrackbar('Hue lower threshold', w.windowName, h_lower, 180, w.hlowCallback)
     cv2.createTrackbar('Hue higher threshold', w.windowName, h_upper, 180, w.hhighCallback)
 
     cv2.createTrackbar('Saturation lower threshold', w.windowName, s_lower, 256, w.slowCallback)
@@ -130,4 +131,3 @@ def set_threshold(cap, init_thresholds=None):
             break
 
     return w.lowerBound, w.higherBound
-
