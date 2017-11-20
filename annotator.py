@@ -172,6 +172,8 @@ while loop:
     if marked != 0:
         cv2.putText(im, notations[marked], (0, height - 40), fontFace=font, fontScale=3,
                     color=(0, 0, 255))
+        cv2.putText(im, "Last clicked position: {}, {}".format(*pos_anno[marked - 1, frame]), (0, height - 160),
+                    fontFace=font, fontScale=0.5, color=(0, 0, 255))
         for blob in range(4):
             if not np.all(pos_anno[blob,frame] == 0): # all zeros
                 cv2.circle(im, tuple(pos_anno[blob,frame]), 10, thickness=-1, color=blob_color[blob])
