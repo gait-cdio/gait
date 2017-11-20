@@ -18,15 +18,15 @@ def track_fill(tracks):
 
 
 def track_direction(track):
-    # TODO(rolf): remove NaNs from x, either here or in some calling function
     x = track[:, 0]
+    x = x[~np.isnan(x)]
     coefficients = np.polyfit(range(len(x)), x, deg=1)  # weights here could be useful if start and stop mess it up
     if coefficients[0] > 0:
         return Direction.right
     elif coefficients[0] < 0:
         return Direction.left
     else:
-        raise ValueError('Undefined slope! Does the track contain NaNs?', x)
+        raise ValueError('Zero or undefined slope!', x)
 
 
 def general_direction(tracks):
@@ -61,20 +61,22 @@ def length_scorer(observed):
     return scores
 
 
-def different_foot_score(pos1, pos2):
+def different_foot_score(pos1, pos2, both_observed):
     distance = np.linalg.norm((pos1 - pos2), axis=1)
+    distance[~both_observed] = np.nan
     mean = np.nanmean(distance)
     variance = np.nanvar(distance)
     return variance / mean
 
 
-def group_tracks_by_feet(tracks):
+def group_tracks_by_feet(tracks, observed):
     n_tracks = len(tracks)
     association_matrix = np.zeros((n_tracks, n_tracks)) * np.nan
     for index1, track1 in enumerate(tracks):
         for index2 in range(index1 + 1, n_tracks):
             track2 = tracks[index2]
-            association_matrix[index1, index2] = different_foot_score(track1, track2)
+            both_observed = np.logical_and(observed[index1], observed[index2])
+            association_matrix[index1, index2] = different_foot_score(track1, track2, both_observed)
 
     matches = utils.greedy_similarity_match(association_matrix, similarity_threshold=5)
 
@@ -115,32 +117,57 @@ def rate_that_foot(matches, tracks, observed, len_weight):
 
 
 def toe_point_heel_point(matches, tracks, dir):
+    feet = [None] * len(matches)
     for pair_index, pair in enumerate(matches):
         if len(pair) > 1:
             # less than 0 if first point in pair is more to the left
-            first_in_pair_left = 0 > np.sum(tracks[pair[0], :, 0] - tracks[pair[1], :, 0])
+            first_in_pair_left = np.nanmean(tracks[pair[0], :, 0] - tracks[pair[1], :, 0]) < 0
             # != is used as a xor
             if (dir == Direction.left) != first_in_pair_left:
-                matches[pair_index] = (pair[1], pair[0])
-    return matches
+                toe_index, heel_index = 1, 0
+            else:
+                toe_index, heel_index = 0, 1
+
+            feet[pair_index] = {
+                'toe': pair[toe_index],
+                'heel': pair[heel_index]
+            }
+        else:
+            feet[pair_index] = {
+                'foot': pair[0]
+            }
+    return feet
 
 
-# This is the main function: Returns list of tuples describing track indexes. First element leftfoot, second right foot
-# If multiple elements in tuple, the first one is the toe.
 def left_foot_right_foot(track_input):
+    """ Take a bunch of tracks as input and return a dict describing which index corresponds to which point on which foot.
+    Also estimate which direction the person is walking in.
+
+    :rtype: dict
+    :param track_input:
+    :return: description of which index corresponds to which point on which foot
+    """
     tracks, observed = track_fill(track_input)
-    matches = group_tracks_by_feet(tracks)
+    matches = group_tracks_by_feet(tracks, observed)
     front_scores = front_foot_scorer(observed)
     best_scores = rate_that_foot(matches, tracks, observed, 1)
     dir = general_direction(tracks)
     ordered_feet = front_foot_back_foot(best_scores, front_scores)
     ordered_feet_with_toe_heel = toe_point_heel_point(ordered_feet, tracks, dir)
     if dir == Direction.left:
-        return ordered_feet_with_toe_heel, dir
+        left_foot = ordered_feet_with_toe_heel[0]
+        right_foot = ordered_feet_with_toe_heel[1]
     elif dir == Direction.right:
-        return reversed(ordered_feet_with_toe_heel), dir
+        left_foot = ordered_feet_with_toe_heel[1]
+        right_foot = ordered_feet_with_toe_heel[0]
     else:
-        ValueError('Unknown direction', dir)
+        raise ValueError('Unknown direction', dir)
+
+    return {
+        'movement_direction': dir,
+        'left_foot': left_foot,
+        'right_foot': right_foot
+    }
 
 
 if __name__ == '__main__':
