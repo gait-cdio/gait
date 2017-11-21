@@ -127,7 +127,7 @@ def set_threshold(cap, init_thresholds=None):
         pressed_key = cv2.waitKey(1) & 0xFF
         if pressed_key == ord('q'):
             cv2.destroyWindow(w.windowName)
-            cv2.destroyWindow(w.maskedWindow)
+            #cv2.destroyWindow(w.maskedWindow)
             break
 
     return w.lowerBound, w.higherBound

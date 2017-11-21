@@ -81,8 +81,11 @@ class ColorTracker:
         ), keypoints))
 
     def cleanup_windows(self):
-        cv2.destroyWindow('Blurred masked')
-        cv2.destroyWindow('Keypoints')
+        cv2.destroyAllWindows()
+        #if self.visualize_blurred_masked:
+        #    cv2.destroyWindow('Blurred masked')
+        #if self.visualize_keypoints:
+        #q    cv2.destroyWindow('Keypoints')
 
 
 def visualize_detections(img, keypoints, window_title='Keypoints'):
