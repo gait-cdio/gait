@@ -8,6 +8,8 @@ from collections import namedtuple
 
 from colortracker import PointFeatures
 
+import markerless_heeltoe_detection_naiive
+
 plt.ioff()
 # import PyOpenPose
 
@@ -90,7 +92,20 @@ else:
             mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel3)
             mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel7)
             #   grabMask, bgdModel, fgdModel = cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
+
+            # Remove blobs < min_size
+            nb, output, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
+            sizes = stats[1:, -1]; nb = nb - 1
+            min_size = 6400  
+            img = np.zeros((output.shape))
+            for i in range(0, nb):
+                if sizes[i] >= min_size:
+                    img[output == i + 1] = 255
+            mask = img
+
             cv2.imshow('Keypoints',mask)
+            markerless_heeltoe_detection_naiive.get_heeltoe(mask)
+
             if paused:
                 delay = 0
             else:
