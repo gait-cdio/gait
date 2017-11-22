@@ -29,102 +29,36 @@ args = parse_arguments()
 
 plt.ioff()
 
-TrackerResults = recordclass('TrackerResults', ['tracker', 'detections', 'tracks'])
 
-detections_filename = 'TrackerResults/' + args.filename + '.detections.npy'
-tracks_filename = 'TrackerResults/' + args.filename + '.tracks.npy'
-trackerList = []
+detections_filename = 'TrackerResults/' + args.filename + '.detections.pkl'
+tracks_filename = 'TrackerResults/' + args.filename + '.tracks.pkl'
 
 # Cache checks
 if args.cached and os.path.isfile(detections_filename):
-    loaded_detections = np.load(detections_filename)
-    trackerList = [TrackerResults(tracker=None, detections=detections, tracks=[]) for detections in loaded_detections]
-    number_frames = len(loaded_detections[0])
+    # loaded_detections = np.load(detections_filename)
+    with open(detections_filename, 'rb') as f:
+        detections = pickle.load(f)
 else:
-    cap = cv2.VideoCapture('input-videos/' + args.filename)
-    number_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    detections = colortracker.detect(args.filename, number_of_trackers=args.numOfTrackers)
 
-    # +-----------------------------------------------------------------------+ 
-    # |                         Initialize trackers                           |
-    # +-----------------------------------------------------------------------+ 
-    # Initialize stuff
-    # Select marker/-less
-    # Maybe prompt user to select colors, regions, etc.
-    # Create instances of necessary classes (SimpleBlobDetector, TrackerKCF, etc.)
-    for i in range(args.numOfTrackers):
-        # Check if there are any saved values for thresholds and load it
-        basename = os.path.splitext(os.path.basename(args.filename))[0]
-        threshold_file = ('hsv-threshold-settings/' + 
-                          basename + '-' + 'threshold' + str(i) + '.pkl')
-        try:
-            with open(threshold_file, 'rb') as f:
-                default_thresholds = pickle.load(f)
-        except FileNotFoundError:
-            default_thresholds = None
+    with open(detections_filename, 'wb') as f:
+        pickle.dump(detections, f)
 
-        keypoint_tracker = ColorTracker()
-        thresholds = set_threshold(cap, default_thresholds)
-        keypoint_tracker.hsv_min, keypoint_tracker.hsv_max = thresholds
-
-        trackerList.append(TrackerResults(tracker=keypoint_tracker, detections=[], tracks=[]))
-
-        # Save threshold settings
-        with open(threshold_file, 'wb') as f:
-            pickle.dump(thresholds, f)
-
-    font = cv2.FONT_HERSHEY_TRIPLEX
-
-    paused = False
-
-
-    # +-----------------------------------------------------------------------+ 
-    # |                          Detect keypoints                             |
-    # +-----------------------------------------------------------------------+ 
-    # Detect keypoints (heel, toe) in each frame
-    for frame_nr in range(number_frames):
-        cap.set(1,frame_nr)
-        ret, img = cap.read()
-
-        #cv2.putText(img, str(frame_nr), (10, 30), fontFace=font, fontScale=1, color=(0, 0, 255))
-
-        for trackerResult in trackerList:
-            detections_for_frame = trackerResult.tracker.detect(img, frame_nr, visualize = True)
-            trackerResult.detections.append(detections_for_frame)
-
-        if paused:
-            delay = 0
-        else:
-            delay = 1
-
-        pressed_key = cv2.waitKey(delay) & 0xFF
-        if pressed_key == ord(' '):
-            paused = not paused
-        elif pressed_key == ord('q'):
-            break
-
-    # +-----------------------------------------------------------------------+ 
-    # |                         Handle missing frames                         |
-    # +-----------------------------------------------------------------------+ 
-    for trackerResult in trackerList:
-        trackerResult.tracker.cleanup_windows()
-        missing_frames = max(number_frames - len(trackerResult.detections), 0)
-        trackerResult.detections += [[]] * missing_frames
-    np.save(detections_filename, [trackerResult.detections for trackerResult in trackerList])
-
+number_frames = len(detections[0])
 
 # +----------------------------------------------------------------------------+
 # |                   Associate keypoints to form tracks                       |
-# +----------------------------------------------------------------------------+ 
+# +----------------------------------------------------------------------------+
 tracks = []
-for trackerResult in trackerList:
-    trackerResult.tracks = tracker.points_to_tracks(trackerResult.detections,
-                                         dist_fun=colortracker.feature_distance(hue_weight=2, 
-                                                                                size_weight=2,
-                                                                                time_weight=1),
-                                         similarity_threshold=140)
-    tracks += trackerResult.tracks
+for detection_tracker in detections:
+    tracks += tracker.points_to_tracks(detection_tracker,
+                                       dist_fun=colortracker.feature_distance(hue_weight=2,
+                                                                              size_weight=2,
+                                                                              time_weight=1),
+                                       similarity_threshold=140)
 
-np.save(tracks_filename, tracks)
+with open(tracks_filename, 'wb') as f:
+    pickle.dump(tracks, f)
 
 
 # TODO(kevin): Find information in tracks to deduce left/right foot and direction they are walking in.
