@@ -1,6 +1,7 @@
 import numpy as np
 import utils
 import itertools
+import pickle
 
 from utils import Direction
 
@@ -171,5 +172,7 @@ def left_foot_right_foot(track_input):
 
 
 if __name__ == '__main__':
-    tracks = np.load("TrackerResults/4farger.mp4.tracks.npy")
-    print(left_foot_right_foot(tracks))
+    with open("TrackerResults/onefoot.mp4.tracks.pkl", 'rb') as f:
+        tracks = pickle.load(f)
+    results = left_foot_right_foot(tracks)
+    print(results)
