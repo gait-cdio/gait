@@ -17,17 +17,23 @@ from gait_argument_parser import parse_arguments
 from gui import set_threshold
 from utils import load_groundtruth
 from visualize_gait import visualize_gait
+from startmenu import start_menu
+import subprocess as sp
+from openpose_parser import load_ankles_allframes
+
 
 utils.create_necessary_dirs(['hsv-threshold-settings', 
                              'annotations', 
                              'input-videos',
                              'output-videos',
                              'output-data',
-                             'TrackerResults'])
+                             'TrackerResults',
+                             'openpose-data'])
 
 args = parse_arguments()
-
+args = start_menu()
 plt.ioff()
+
 
 
 detections_filename = 'TrackerResults/' + args.filename + '.detections.pkl'
@@ -38,8 +44,12 @@ if args.cached and os.path.isfile(detections_filename):
     # loaded_detections = np.load(detections_filename)
     with open(detections_filename, 'rb') as f:
         detections = pickle.load(f)
+elif args.method == 'markerless':
+    sp.call("./openpose_run.sh " + args.filename, shell=True)
+    detections = load_ankles_allframes('openpose-data/' + args.filename )
 else:
     detections = colortracker.detect(args.filename, number_of_trackers=args.numOfTrackers)
+
 
     with open(detections_filename, 'wb') as f:
         pickle.dump(detections, f)
@@ -68,7 +78,7 @@ with open(tracks_filename, 'wb') as f:
 # +----------------------------------------------------------------------------+
 # |                Plot the detrended coordinates. 1x2 subplots                |
 # +----------------------------------------------------------------------------+ 
-fig, axes = plt.subplots(ncols=2, sharex=True)
+fig, axes = plt.subplots(ncols=2, sharex=True, figsize=(10,5)) # <-- storlek ges i tum. rofl lmao
 for track in tracks:
     t_c = [state.frame for state in track.state_history]
     x_c = [state.x for state in track.state_history]
@@ -77,6 +87,11 @@ for track in tracks:
     axes[1].plot(t_c, signal.detrend(y_c), 'o-', markersize=2)
 
 axes[1].invert_yaxis()
+axes[0].set_xlabel('Frame')
+axes[0].set_ylabel('Detrended position x')
+axes[1].set_xlabel('Frame')
+axes[1].set_ylabel('Detrended position y')
+
 plt.show()
 
 # TODO(rolf): link the subplots in some way to easily see which points correspond,
@@ -99,6 +114,7 @@ for track_index, point_track in enumerate(tracks):
     estdyline = axes[0, 1].plot(750 - (1 + track_index) * 100 * updown_estimation, 'o-', markersize=2,
                                 label='estimated up/down, index ' + str(track_index))
     derivline = axes[1, 0].plot(range(0, number_frames), x_derivatives[track_index], 'o-', markersize=2)
+
     t = [state.frame for state in point_track.state_history]
     x = [state.x for state in point_track.state_history]
 
@@ -123,6 +139,12 @@ if os.path.isfile(groundtruth_filename):
                                  label='ground truth up/down, right foot')
 else:
     print('WARNING: could not find ground truth for foot up/down')
+
+
+axes[0,0].set_xlabel('Frame')
+axes[0,0].set_ylabel('')
+axes[0,1].set_xlabel('Frame')
+axes[0,1].set_ylabel('')
 
 # Style choices
 axes[0, 0].legend()

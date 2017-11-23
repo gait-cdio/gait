@@ -7,4 +7,8 @@ __pycache__/
 
 *.npy
 
+*.json
+
+openpose-data/*
+
 output-data
