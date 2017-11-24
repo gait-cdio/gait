@@ -1,7 +1,12 @@
 import cv2
 import numpy as np
 from recordclass import recordclass
+import pickle
+import os
 
+from gui import set_threshold
+
+TrackerWithDetections = recordclass('TrackerWithDetections', ['tracker', 'detections'])
 
 def variance_greater_than(threshold):
     def fun(track):
@@ -81,8 +86,7 @@ class ColorTracker:
         ), keypoints))
 
     def cleanup_windows(self):
-        cv2.destroyWindow('Blurred masked')
-        cv2.destroyWindow('Keypoints')
+        cv2.destroyAllWindows()
 
 
 def visualize_detections(img, keypoints, window_title='Keypoints'):
@@ -113,3 +117,75 @@ def feature_distance(distance_weight=1, size_weight=0, hue_weight=0, time_weight
         d = np.sqrt(d2)
         return d * distance_weight + s * size_weight + h * hue_weight + t * time_weight
     return closure
+
+def detect(filename, number_of_trackers=1, visualize=False):
+    cap = cv2.VideoCapture('input-videos/' + filename)
+    number_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    # +-----------------------------------------------------------------------+
+    # |                         Initialize trackers                           |
+    # +-----------------------------------------------------------------------+
+    # Initialize stuff
+    # Select marker/-less
+    # Maybe prompt user to select colors, regions, etc.
+    # Create instances of necessary classes (SimpleBlobDetector, TrackerKCF, etc.)
+    trackerList = []
+
+    for i in range(number_of_trackers):
+        # Check if there are any saved values for thresholds and load it
+        basename = os.path.splitext(os.path.basename(filename))[0]
+        threshold_file = ('hsv-threshold-settings/' +
+                          basename + '-' + 'threshold' + str(i) + '.pkl')
+        try:
+            with open(threshold_file, 'rb') as f:
+                default_thresholds = pickle.load(f)
+        except FileNotFoundError:
+            default_thresholds = None
+
+        keypoint_tracker = ColorTracker()
+        thresholds = set_threshold(cap, default_thresholds)
+        keypoint_tracker.hsv_min, keypoint_tracker.hsv_max = thresholds
+
+        trackerList.append(TrackerWithDetections(tracker=keypoint_tracker, detections=[]))
+
+        # Save threshold settings
+        with open(threshold_file, 'wb') as f:
+            pickle.dump(thresholds, f)
+
+    paused = False
+
+    # +-----------------------------------------------------------------------+
+    # |                          Detect keypoints                             |
+    # +-----------------------------------------------------------------------+
+    # Detect keypoints (heel, toe) in each frame
+    for frame_nr in range(number_frames):
+        cap.set(1, frame_nr)
+        ret, img = cap.read()
+
+        # cv2.putText(img, str(frame_nr), (10, 30), fontFace=font, fontScale=1, color=(0, 0, 255))
+
+        for tracker in trackerList:
+            detections_for_frame = tracker.tracker.detect(img, frame_nr, visualize=visualize)
+            tracker.detections.append(detections_for_frame)
+
+        if visualize:
+            if paused:
+                delay = 0
+            else:
+                delay = 1
+
+            pressed_key = cv2.waitKey(delay) & 0xFF
+            if pressed_key == ord(' '):
+                paused = not paused
+            elif pressed_key == ord('q'):
+                break
+
+    # +-----------------------------------------------------------------------+
+    # |                         Handle missing frames                         |
+    # +-----------------------------------------------------------------------+
+    for tracker in trackerList:
+        tracker.tracker.cleanup_windows()
+        missing_frames = max(number_frames - len(tracker.detections), 0)
+        tracker.detections += [[]] * missing_frames
+
+    return list(map(lambda tracker: tracker.detections, trackerList))

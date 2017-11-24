@@ -14,7 +14,6 @@ def write_gait_parameters_to_file(filename, updown_estimations):
 
 
 def duty_cycle(updown_with_nans):
-    """ NOTE THIS FUNCTION DOES NOT CALCULATE THE DUTY CYCLE CORRECTLY """
     # Remove all values when foot is not in frame (i.e. nan values)
     updown = updown_with_nans[~np.isnan(updown_with_nans)]
 
