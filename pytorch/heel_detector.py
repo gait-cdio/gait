@@ -37,16 +37,22 @@ class ClickRecorder:
         plt.show()
 
 
-if os.environ.get('DISPLAY') is not None:
-	fig, ax = plt.subplots()
-	ax.imshow(image)
+has_graphics = bool(os.environ.get('DISPLAY'))
 
-	click_recorder = ClickRecorder(fig)
+select_points_interactively = False
 
-	plt.show()
-	clicks = click_recorder.clicks
+if select_points_interactively:
+    fig, ax = plt.subplots()
+    ax.imshow(image)
+
+    click_recorder = ClickRecorder(fig)
+
+    plt.show()
+    clicks = click_recorder.clicks
 else:
-	clicks = [(64, 433)]
+    # Poor person's caching. TODO(rolf): replace with real caching
+    clicks = [(438.947004608295, 879.72488479262677), (584.93778801843314, 836.95990783410139),
+              (127.79493087557603, 898.89539170506919), (42.264976958525324, 789.77096774193546)]
 
 groundtruth_output = np.zeros(image.shape[0:2])
 
@@ -58,41 +64,43 @@ for click in clicks:
     sigma = 10.0
     groundtruth_output += np.exp(- ((xx - click[0]) ** 2 + (yy - click[1]) ** 2) / (2 * sigma ** 2))
 
-if os.environ.get('DISPLAY') is not None:
-	gtfig, gtax = plt.subplots()
-	gtax.imshow(groundtruth_output)
-	plt.show()
-
 window_shape = (32, 32, 3)
 training_images = skimage.util.shape.view_as_windows(image, window_shape)
 
 reshaped_training_images = training_images.reshape(-1, 32, 32, 3)
-reshaped_groundtruth_output = groundtruth_output[16:-15,16:-15].reshape(-1)
+reshaped_groundtruth_output = groundtruth_output[16:-15, 16:-15].reshape(-1)
 
-dataset = torch.utils.data.TensorDataset(torch.ByteTensor(reshaped_training_images), torch.Tensor(reshaped_groundtruth_output))
+dataset = torch.utils.data.TensorDataset(torch.ByteTensor(reshaped_training_images),
+                                         torch.Tensor(reshaped_groundtruth_output))
 
-resnet = models.resnet18(pretrained=True)
-for param in resnet.parameters():
+vgg = models.vgg11(pretrained=True)
+
+counter = 0
+for param in vgg.parameters():
     param.requires_grad = False
+    counter += 1
 
-num_features = resnet.fc.in_features
-resnet.fc = torch.nn.Linear(num_features, 1)
-resnet.fc.requires_grad = True
+input_params = vgg.classifier._modules['6'].in_features
+vgg.classifier._modules['6'] = torch.nn.Linear(input_params, 1)
 
-resnet = resnet.cuda()
+vgg = vgg.cuda()
 
 lossfunction = torch.nn.MSELoss()
-optimizer = torch.optim.SGD(resnet.fc.parameters(), lr=0.001, momentum=0.9)
+optimizer = torch.optim.SGD(vgg.classifier[-1].parameters(), lr=0.001, momentum=0.9)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
 
 for sample in dataset:
     input, groundtruth = sample
-    print(input, groundtruth)
-    input, groundtruth = Variable(input).cuda(), Variable(torch.Tensor([groundtruth])).cuda()
+
+    input = input.float().permute(2, 0, 1).unsqueeze_(0)
+    groundtruth = torch.Tensor([groundtruth]).unsqueeze_(0)
+    print('input shape:', input.shape)
+    print('groundtruth shape:', groundtruth.shape)
+    input, groundtruth = Variable(input).cuda(), Variable(groundtruth).cuda()
 
     optimizer.zero_grad()
 
-    output = resnet(input)
+    output = vgg(input)
     loss = lossfunction(output, groundtruth)
 
     print("Loss:", loss.data[0])
