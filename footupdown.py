@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.ndimage.filters as filt
 from scipy import signal
-
+from utils import Direction
 
 def gaussian(x, mu, sig):
     return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
@@ -68,28 +68,54 @@ def estimate_naive(tracks, max_frame, applicability_std=1.3, blur_std=3, up_thre
 
     return estimations, derivatives
 
-def estimate_detrend(tracks, max_frame, applicability_std=1.3, blur_std=3, up_thresh=0.25, down_thresh=0.45):
+def est_up_down(conc_track, estimations, derivatives, direction, max_frame, applicability_std, blur_std, up_thresh, down_thresh):
+    t_c = [state.frame for state in conc_track.state_history]
+    x_c = signal.detrend([state.x for state in conc_track.state_history])
+    y_c = signal.detrend([state.y for state in conc_track.state_history])
+    fixed_x, frame_offset = inpaint_1d(np.array(x_c), np.array(t_c), appStd=applicability_std)
+    fixed_y, _ = inpaint_1d(np.array(y_c), np.array(t_c), appStd=applicability_std)
+    dx_c = filt.gaussian_filter1d(input=fixed_x, sigma=blur_std, order=1,
+                                  mode='nearest')  # order=1 lagpass + derivering. TODO explore mode options
+    if (direction == Direction.left):
+        thresh = np.where(dx_c < 0)
+    else:
+        thresh = np.where(dx_c > 0)
+    est_step = np.zeros(dx_c.shape)
+    est_step[thresh] = 1
+
+    start_padding = np.ones(frame_offset) * np.nan
+    end_padding = np.ones(max_frame - len(est_step) - frame_offset) * np.nan
+    est_step = np.concatenate((start_padding, est_step, end_padding))
+    dx_c = np.concatenate((start_padding, dx_c, end_padding))
+
+    estimations.append(est_step)
+    derivatives.append(dx_c)
+
+def estimate_detrend(tracks, dir_dict, max_frame, applicability_std=1.3, blur_std=3, up_thresh=0.25, down_thresh=0.45):
     estimations = []
     derivatives = []
+    used_indexes = np.zeros(2, )
 
-    for index, track in enumerate(tracks):
-        t_c = [state.frame for state in track.state_history]
-        x_c = signal.detrend([state.x for state in track.state_history])
-        y_c = signal.detrend([state.y for state in track.state_history])
-        fixed_x, frame_offset = inpaint_1d(np.array(x_c), np.array(t_c), appStd=applicability_std)
-        fixed_y, _ = inpaint_1d(np.array(y_c), np.array(t_c), appStd=applicability_std)
-        dx_c = filt.gaussian_filter1d(input=fixed_x, sigma=blur_std, order=1,
-                                      mode='nearest')  # order=1 lagpass + derivering. TODO explore mode options
-        thresh = np.where(dx_c < 0)
-        est_step = np.zeros(dx_c.shape)
-        est_step[thresh] = 1
+    # Left foot first
+    if (len(dir_dict['left_foot']) == 2):
+        index = dir_dict['left_foot']['toe']
+        track = tracks[index]
+    else:
+        index = dir_dict['left_foot']
+        track = tracks[index]
+    est_up_down(track, estimations, derivatives, dir_dict['movement_direction'], max_frame, applicability_std, blur_std, up_thresh, down_thresh)
 
-        start_padding = np.ones(frame_offset) * np.nan
-        end_padding = np.ones(max_frame - len(est_step) - frame_offset) * np.nan
-        est_step = np.concatenate((start_padding, est_step, end_padding))
-        dx_c = np.concatenate((start_padding, dx_c, end_padding))
+    used_indexes[0] = index
 
-        estimations.append(est_step)
-        derivatives.append(dx_c)
+    # Then right foot
+    if (len(dir_dict['right_foot']) == 2):
+        index = dir_dict['right_foot']['toe']
+        track = tracks[index]
+    else:
+        index = dir_dict['right_foot']
+        track = tracks[index]
+    est_up_down(track, estimations, derivatives, dir_dict['movement_direction'], max_frame, applicability_std, blur_std, up_thresh, down_thresh)
 
-    return estimations, derivatives
+    used_indexes[1] = index
+
+    return estimations, derivatives, used_indexes

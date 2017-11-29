@@ -172,7 +172,7 @@ def left_foot_right_foot(track_input):
 
 
 if __name__ == '__main__':
-    with open("TrackerResults/onefoot.mp4.tracks.pkl", 'rb') as f:
+    with open("TrackerResults/4farger.mp4.tracks.pkl", 'rb') as f:
         tracks = pickle.load(f)
     results = left_foot_right_foot(tracks)
     print(results)

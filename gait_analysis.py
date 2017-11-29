@@ -20,6 +20,8 @@ from visualize_gait import visualize_gait
 from startmenu import start_menu
 import subprocess as sp
 from openpose_parser import load_ankles_allframes
+from footleftright import left_foot_right_foot
+from utils import Direction
 
 
 utils.create_necessary_dirs(['hsv-threshold-settings', 
@@ -74,6 +76,9 @@ with open(tracks_filename, 'wb') as f:
 # TODO(kevin): Find information in tracks to deduce left/right foot and direction they are walking in.
 # TODO(kevin): This info will be used in up/down estimations and plotting later on.
 # TODO(rolf): make this plotting code prettier
+dir_and_foot_pairs = left_foot_right_foot(tracks)
+
+print(dir_and_foot_pairs)
 
 # +----------------------------------------------------------------------------+
 # |                Plot the detrended coordinates. 1x2 subplots                |
@@ -100,20 +105,23 @@ plt.show()
 # +----------------------------------------------------------------------------+
 # |                  Generate foot down/up, get derivatives                    |
 # +----------------------------------------------------------------------------+ 
-updown_estimations, x_derivatives = estimate_detrend(tracks, max_frame=number_frames)
+updown_estimations, x_derivatives, used_updown_indexes = estimate_detrend(tracks, dir_and_foot_pairs, max_frame=number_frames)
 
 # +----------------------------------------------------------------------------+
 # |                              Present results                               |
 # +----------------------------------------------------------------------------+ 
 f, axes = plt.subplots(ncols=2, nrows=2, sharex=True)
 # Add up/down estimations and derivatives in plots. 2x2 subplots
-for track_index, point_track in enumerate(tracks):
-    updown_estimation = updown_estimations[track_index]
+#for track_index, point_track in enumerate(tracks):
+for estimate_index, track_index in enumerate(used_updown_indexes):
+    track_index = int(track_index)
+    point_track = tracks[track_index]
+    updown_estimation = updown_estimations[estimate_index]
     estdxline = axes[0, 0].plot((1 + track_index) * 1000 * updown_estimation, 'o-', markersize=2,
                                 label='estimated up/down, index ' + str(track_index))
     estdyline = axes[0, 1].plot(750 - (1 + track_index) * 100 * updown_estimation, 'o-', markersize=2,
                                 label='estimated up/down, index ' + str(track_index))
-    derivline = axes[1, 0].plot(range(0, number_frames), x_derivatives[track_index], 'o-', markersize=2)
+    derivline = axes[1, 0].plot(range(0, number_frames), x_derivatives[estimate_index], 'o-', markersize=2)
 
     t = [state.frame for state in point_track.state_history]
     x = [state.x for state in point_track.state_history]
