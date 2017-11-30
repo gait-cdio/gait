@@ -11,13 +11,11 @@ import torchvision
 import test_dl_utils
 
 
-def selectHeel(filename, frame):
-    cap = cv2.VideoCapture(filename)
-    cap.set(1, frame)
-    ret, img = cap.read()
+def selectHeel(image):
+    img = np.copy(image)
     cv2.namedWindow("Bild")
-    if ret:
 
+    if ret:
         roi = cv2.selectROI("Bild", img)
         cv2.destroyAllWindows()
         cv2.normalize(img, img, dtype=cv2.CV_32F)
@@ -27,9 +25,11 @@ def selectHeel(filename, frame):
         mask[y:y + h, x:x + w] = 1
 
         heelArray = []
+        coordArray = []
         for i in range(x - 15, x + w - 15):
             for k in range(y - 15, y + h - 15):
                 heelArray.append(img[k:k + 32, i:i + 32])
+                coordArray.append((i + 15, k + 15))
 
         falseArray = []
         for i in range(x - 32, x + w):
@@ -38,7 +38,7 @@ def selectHeel(filename, frame):
         for i in range(y - 32, y + h):
             falseArray.append(img[i:i + 32, x - 32:x])
             falseArray.append(img[i:i + 32, x + w:x + w + 32])
-        return mask, np.array(heelArray), np.array(falseArray)
+        return mask, np.array(heelArray), np.array(falseArray), coordArray
     else:
         return False
 
@@ -70,7 +70,13 @@ def separateDatasets(trueArray, falseArray, ratio=0.6):
             'val': TensorDataset(valTensor.float(), valInts)}
 
 
-mask, iA, fA = selectHeel("input-videos/4farger.mp4", 120)
+cap = cv2.VideoCapture("input-videos/4farger.mp4")
+cap.set(1, 120)
+ret, image = cap.read()
+
+assert ret
+
+mask, iA, fA, _ = selectHeel(image)
 
 np.random.shuffle(iA)
 np.random.shuffle(fA)
@@ -81,38 +87,39 @@ dataloaders = {x: torch.utils.data.DataLoader(footDataset[x], batch_size=50,
                                               shuffle=True, num_workers=1)
                for x in ['train', 'val']}
 
-vgg19 = torchvision.models.vgg19(pretrained=True)
-vgg19.features = torch.nn.Sequential(*[vgg19.features[i] for i in range(8)])
+vgg = torchvision.models.vgg19(pretrained=True)
+vgg.features = torch.nn.Sequential(*[vgg.features[i] for i in range(8)])
 
-for params in vgg19.parameters():
+for params in vgg.parameters():
     params.require_grad = False
 fc1 = torch.nn.Linear(32768, 32)
 fc2 = torch.nn.Linear(32,2)
-vgg19.classifier = torch.nn.Sequential(fc1,fc2)
+vgg.classifier = torch.nn.Sequential(fc1, fc2)
 
 if torch.cuda.is_available():
-    vgg19 = vgg19.cuda()
+    vgg = vgg.cuda()
 
 criterion = torch.nn.CrossEntropyLoss()
-optimizer_conv = optim.SGD(vgg19.classifier.parameters(), lr=0.00001)
+optimizer_conv = optim.SGD(vgg.classifier.parameters(), lr=0.00001)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=1, gamma=0.1, last_epoch=-1)
 
-trained_model = test_dl_utils.train_model(vgg19, criterion, optimizer_conv, exp_lr_scheduler, dataloaders, num_epochs=20)
+trained_model = test_dl_utils.train_model(vgg, criterion, optimizer_conv, exp_lr_scheduler, dataloaders,
+                                          num_epochs=20)
 
+cap.set(1, 120)
+ret, image = cap.read()
 
-_, new_iA, new_fA = selectHeel("input-videos/4farger.mp4", 119)
+assert ret
 
+_, new_iA, new_fA, coords = selectHeel(image)
 
-for im in new_iA:
+for index, coord in enumerate(coords):
+    out = trained_model(Variable(torch.from_numpy(new_iA[index]).permute(2, 0, 1).unsqueeze(0)).float().cuda())
+    _, prediction = torch.max(out.data, dim=1)
 
-    out = trained_model(Variable(torch.from_numpy(im).permute(2, 0, 1).unsqueeze(0)).float().cuda())
-    _, pred = torch.max(out.data, 1)
-    print(pred)
-    cv2.imshow('test bild', im)
-    cv2.waitKey(0)
+    print('Predicted {}/{}: {}'.format(index + 1, len(coords), bool(prediction[0])))
+    if prediction[0]:
+        image[coord[1], coord[0]] = (0, 0, 255)
 
-'''for phase in ['train', 'val']:
-    for data in dataloaders[phase]:
-        image, label = data
-        print(image.shape)
-        print(label.shape)'''
+cv2.imshow('Here it is', image)
+cv2.waitKey(0)
