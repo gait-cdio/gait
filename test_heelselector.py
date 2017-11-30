@@ -56,16 +56,15 @@ def separateDatasets(trueArray, falseArray, ratio=0.6):
     train_labels = np.zeros(len(train_images), dtype="int")
     val_labels = np.zeros(len(val_images), dtype="int")
 
-    train_labels[:true_splitting_index] = 0
-    train_labels[true_splitting_index:] = 1
-    val_labels[:(num_true_images - true_splitting_index)] = 0
-    val_labels[(num_true_images - true_splitting_index):] = 1
+    train_labels[:true_splitting_index] = 1
+    train_labels[true_splitting_index:] = 0
+    val_labels[:(num_true_images - true_splitting_index)] = 1
+    val_labels[(num_true_images - true_splitting_index):] = 0
 
     trainTensor = torch.from_numpy(train_images)
     trainInts = torch.from_numpy(train_labels)
     valTensor = torch.from_numpy(val_images)
     valInts = torch.from_numpy(val_labels)
-
 
     return {'train': TensorDataset(trainTensor.float(), trainInts),
             'val': TensorDataset(valTensor.float(), valInts)}
@@ -73,19 +72,22 @@ def separateDatasets(trueArray, falseArray, ratio=0.6):
 
 mask, iA, fA = selectHeel("input-videos/4farger.mp4", 120)
 
+np.random.shuffle(iA)
+np.random.shuffle(fA)
+
 footDataset = separateDatasets(iA, fA)
 
 dataloaders = {x: torch.utils.data.DataLoader(footDataset[x], batch_size=50,
-                                             shuffle=True, num_workers=1)
+                                              shuffle=True, num_workers=1)
                for x in ['train', 'val']}
 
 vgg19 = torchvision.models.vgg19(pretrained=True)
+vgg19.features = torch.nn.Sequential(*[vgg19.features[i] for i in range(8)])
+
 for params in vgg19.parameters():
     params.require_grad = False
-
-vgg19.features = torch.nn.Sequential(*[vgg19.features[i] for i in range(8)])
-fc1 = torch.nn.Linear(32768, 100)
-fc2 = torch.nn.Linear(100,2)
+fc1 = torch.nn.Linear(32768, 32)
+fc2 = torch.nn.Linear(32,2)
 vgg19.classifier = torch.nn.Sequential(fc1,fc2)
 
 if torch.cuda.is_available():
@@ -95,7 +97,19 @@ criterion = torch.nn.CrossEntropyLoss()
 optimizer_conv = optim.SGD(vgg19.classifier.parameters(), lr=0.00001)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=1, gamma=0.1, last_epoch=-1)
 
-test_dl_utils.train_model(vgg19, criterion, optimizer_conv, exp_lr_scheduler, dataloaders, num_epochs=50)
+trained_model = test_dl_utils.train_model(vgg19, criterion, optimizer_conv, exp_lr_scheduler, dataloaders, num_epochs=20)
+
+
+_, new_iA, new_fA = selectHeel("input-videos/4farger.mp4", 119)
+
+
+for im in new_iA:
+
+    out = trained_model(Variable(torch.from_numpy(im).permute(2, 0, 1).unsqueeze(0)).float().cuda())
+    _, pred = torch.max(out.data, 1)
+    print(pred)
+    cv2.imshow('test bild', im)
+    cv2.waitKey(0)
 
 '''for phase in ['train', 'val']:
     for data in dataloaders[phase]:

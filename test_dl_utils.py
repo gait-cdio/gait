@@ -95,8 +95,8 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=
 
     # load best model weights
     model.load_state_dict(best_model_wts)
-    plt.plot(train_losses, label='Training data')
-    plt.plot(val_losses, label='Validation data')
+    plt.semilogy(train_losses, label='Training data')
+    plt.semilogy(val_losses, label='Validation data')
     plt.legend()
     plt.show()
     return model
