@@ -26,8 +26,14 @@ def interpolate_keypoints(pos_anno):
 if __name__ != "__main__":
     exit(0)
 
-video_name = '4farger.mp4'
-cap = cv2.VideoCapture('input-videos/' + video_name)
+filename = 'john_markerless/john_markerless_%04d.jpg'
+
+if '%04d' in filename:
+    video_name = os.path.split(filename)[1].split('_%04d')[0]
+else:
+    video_name = os.path.splitext(filename)[0]
+
+cap = cv2.VideoCapture('input-images/' + filename)
 width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 nframes = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -38,7 +44,10 @@ cv2.resizeWindow('Gait Annotator', width, height)
 
 frame = 0
 marked = 0
-pos_anno = np.zeros(shape=[nframes, 4, 2], dtype=np.uint16) * np.nan
+try:
+    pos_anno = np.load('annotations/' + video_name + '-positions.npy')
+except IOError:
+    pos_anno = np.zeros(shape=[nframes, 4, 2], dtype=np.uint16) * np.nan
 
 w = cv2.namedWindow('Position Annotator', cv2.WINDOW_NORMAL)
 cv2.setMouseCallback('Position Annotator', mouse_callback, pos_anno)
@@ -66,10 +75,10 @@ while loop:
                     color=(0, 0, 255))
         cv2.putText(im, "Last clicked position: {}, {}".format(*pos_anno[frame, marked - 1]), (0, height - 160),
                     fontFace=font, fontScale=0.5, color=(0, 0, 255))
-        for blob in range(4):
-            if not np.any(np.isnan(pos_anno[frame, blob])):  # Are you a nun?
-                cv2.drawMarker(im, tuple(pos_anno[frame, blob].astype(np.uint16)), thickness=2, markerSize=10,
-                               markerType=cv2.MARKER_TILTED_CROSS, color=blob_color[blob])
+    for blob in range(4):
+        if not np.any(np.isnan(pos_anno[frame, blob])):  # Are you a nun?
+            cv2.drawMarker(im, tuple(pos_anno[frame, blob].astype(np.uint16)), thickness=2, markerSize=10,
+                           markerType=cv2.MARKER_TILTED_CROSS, color=blob_color[blob])
     cv2.imshow('Position Annotator', im)
     while True:
         pressed_key = cv2.waitKey(50) & 0xFF
@@ -105,14 +114,15 @@ while loop:
         elif pressed_key == ord('!'):
             pos_anno = interpolate_keypoints(pos_anno)
         elif pressed_key == ord('S'):
-            np.save('annotations/' + os.path.splitext(video_name)[0] + '-positions', pos_anno)
+            np.save('annotations/' + video_name + '-positions', pos_anno)
         else:
             continue
         break
 
 cv2.destroyAllWindows()
 
-p_anno = np.load('annotations/' + os.path.splitext(video_name)[0] + '-positions.npy')
+"""
+p_anno = np.load('annotations/' + video_name + '-positions.npy')
 
 w = cv2.namedWindow('Position Check', cv2.WINDOW_NORMAL)
 cv2.resizeWindow('Position Check', width, height)
@@ -129,7 +139,8 @@ while loop:
 
     for blob in range(4):
         if not np.any(np.isnan(p_anno[frame, blob])):
-            cv2.circle(im, tuple(p_anno[frame, blob]), 10, thickness=-1, color=blob_color[blob])
+            cv2.drawMarker(im, tuple(pos_anno[frame, blob].astype(np.uint16)), thickness=2, markerSize=10,
+                           markerType=cv2.MARKER_TILTED_CROSS, color=blob_color[blob])
     cv2.imshow('Position Check', im)
     while True:
         pressed_key = cv2.waitKey(0) & 0xFF
@@ -153,3 +164,4 @@ while loop:
         break
 
 cv2.destroyAllWindows()
+"""
