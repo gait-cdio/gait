@@ -20,7 +20,7 @@ def selectHeel(filename, frame):
 
         roi = cv2.selectROI("Bild", img)
         cv2.destroyAllWindows()
-        cv2.normalize(img, img)
+        cv2.normalize(img, img, dtype=cv2.CV_32F)
         x, y, w, h = roi
         height, width, _ = img.shape
         mask = np.zeros([height, width])
@@ -43,36 +43,28 @@ def selectHeel(filename, frame):
         return False
 
 
-def separateDatasets(imageArray, falseArray, ratio=0.6):
-    numOfTrainImages = int(np.floor(len(imageArray) * ratio + len(falseArray) * ratio) - 1)
-    numOfValImages = int(np.floor(len(imageArray) * (1 - ratio) + len(falseArray) * (1 - ratio)))
-    _, width, height, _ = imageArray.shape
+def separateDatasets(trueArray, falseArray, ratio=0.6):
+    num_true_images = trueArray.shape[0]
+    num_false_images = falseArray.shape[0]
+    true_splitting_index = int(num_true_images * ratio)
+    false_splitting_index = int(num_false_images * ratio)
+    # TODO(rolf): handle corner case with too few images (splitting index becomes < 0)
 
-    trainImages = np.zeros([numOfTrainImages, width, height, 3])
-    trainLabels = np.zeros([numOfTrainImages], dtype="int")
-    valImages = np.zeros([numOfValImages, width, height, 3])
-    valLabels = np.zeros([numOfValImages], dtype="int")
+    train_images = np.concatenate((trueArray[:true_splitting_index], falseArray[:false_splitting_index]), axis=0)
+    val_images   = np.concatenate((trueArray[true_splitting_index:], falseArray[false_splitting_index:]), axis=0)
 
-    for ind, image in enumerate(imageArray[0:int(len(imageArray)*ratio)-1]):
-        trainImages[ind] = image
-        trainLabels[ind] = 1
+    train_labels = np.zeros(len(train_images), dtype="int")
+    val_labels = np.zeros(len(val_images), dtype="int")
 
-    for ind, image in enumerate(falseArray[0:int(len(falseArray) * ratio)-1]):
-        trainImages[ind] = image
-        trainLabels[ind] = 0
+    train_labels[:true_splitting_index] = 0
+    train_labels[true_splitting_index:] = 1
+    val_labels[:(num_true_images - true_splitting_index)] = 0
+    val_labels[(num_true_images - true_splitting_index):] = 1
 
-    for ind, image in enumerate(imageArray[int(len(imageArray)*ratio):]):
-        valImages[ind] = image
-        valLabels[ind] = 1
-
-    for ind, image in enumerate(falseArray[int(len(falseArray)*ratio):]):
-        valImages[ind] = image
-        valLabels[ind] = 0
-
-    trainTensor = torch.from_numpy(trainImages.reshape(-1,32,32,3))
-    trainInts = torch.from_numpy(trainLabels)
-    valTensor = torch.from_numpy(valImages)
-    valInts =  torch.from_numpy(valLabels)
+    trainTensor = torch.from_numpy(train_images)
+    trainInts = torch.from_numpy(train_labels)
+    valTensor = torch.from_numpy(val_images)
+    valInts = torch.from_numpy(val_labels)
 
 
     return {'train': TensorDataset(trainTensor.float(), trainInts),
@@ -83,7 +75,7 @@ mask, iA, fA = selectHeel("input-videos/4farger.mp4", 120)
 
 footDataset = separateDatasets(iA, fA)
 
-dataloaders = {x: torch.utils.data.DataLoader(footDataset[x], batch_size=1,
+dataloaders = {x: torch.utils.data.DataLoader(footDataset[x], batch_size=50,
                                              shuffle=True, num_workers=1)
                for x in ['train', 'val']}
 
@@ -96,12 +88,14 @@ fc1 = torch.nn.Linear(32768, 100)
 fc2 = torch.nn.Linear(100,2)
 vgg19.classifier = torch.nn.Sequential(fc1,fc2)
 
-criterion = torch.nn.CrossEntropyLoss()
-optimizer_conv = optim.SGD(vgg19.classifier.parameters(), lr=0.01, momentum=0.9)
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=1, gamma=0.1)
-epoch = 10
+if torch.cuda.is_available():
+    vgg19 = vgg19.cuda()
 
-test_dl_utils.train_model(vgg19, criterion, optimizer_conv, exp_lr_scheduler, dataloaders, epoch)
+criterion = torch.nn.CrossEntropyLoss()
+optimizer_conv = optim.SGD(vgg19.classifier.parameters(), lr=0.00001)
+exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=1, gamma=0.1, last_epoch=-1)
+
+test_dl_utils.train_model(vgg19, criterion, optimizer_conv, exp_lr_scheduler, dataloaders, num_epochs=50)
 
 '''for phase in ['train', 'val']:
     for data in dataloaders[phase]:

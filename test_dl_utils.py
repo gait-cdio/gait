@@ -18,6 +18,11 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=
     best_model_wts = model.state_dict()
     best_acc = 0.0
 
+    train_losses = np.zeros(num_epochs)
+    val_losses = np.zeros(num_epochs)
+    train_corrects = np.zeros(num_epochs, dtype=int)
+    val_corrects = np.zeros(num_epochs, dtype=int)
+
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 10)
@@ -39,8 +44,8 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=
                 inputs, labels = data
 
                 # wrap them in Variable
-                if torch.cuda.is_available() and False:
-                    inputs = Variable(inputs.cuda())
+                if torch.cuda.is_available():
+                    inputs = Variable(inputs.permute(0,3,1,2).cuda())
                     labels = Variable(labels.cuda())
                 else:
                     inputs = inputs.permute(0,3,1,2)
@@ -60,11 +65,18 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=
                     optimizer.step()
 
                 # statistics
-                running_loss += loss.data[0]
+                running_loss += loss.data[0] / len(inputs)
                 running_corrects += torch.sum(preds == labels.data)
 
             epoch_loss = running_loss
             epoch_acc = running_corrects
+
+            if phase == 'val':
+                val_losses[epoch] = epoch_loss
+                val_corrects[epoch] = epoch_acc
+            else:
+                train_losses[epoch] = epoch_loss
+                train_corrects[epoch] = epoch_acc
 
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(
                 phase, epoch_loss, epoch_acc))
@@ -83,6 +95,10 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=
 
     # load best model weights
     model.load_state_dict(best_model_wts)
+    plt.plot(train_losses, label='Training data')
+    plt.plot(val_losses, label='Validation data')
+    plt.legend()
+    plt.show()
     return model
 
 
