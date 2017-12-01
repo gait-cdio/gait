@@ -5,12 +5,14 @@ import numpy as np
 def write_gait_parameters_to_file(filename, updown_estimations, fps):
     parameters = {}
     parameters['duty_cycle'] = {}
+    parameters['stance_duration'] = {}
+    parameters['swing_duration'] = {}
     feet_order=['left', 'right']
 
     for i, updown in enumerate(updown_estimations):
         parameters['duty_cycle'][feet_order[i]] = duty_cycle(updown)
-        stance_duration(updown, fps)
-        swing_duration(updown, fps)
+        parameters['stance_duration'][feet_order[i]] = stance_duration(updown, fps)
+        parameters['swing_duration'][feet_order[i]] = swing_duration(updown, fps)
 
     with open(filename, 'w') as f:
         yaml.dump(parameters, f, default_flow_style=False)
