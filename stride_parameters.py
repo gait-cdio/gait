@@ -5,9 +5,10 @@ import numpy as np
 def write_gait_parameters_to_file(filename, updown_estimations):
     parameters = {}
     parameters['duty_cycle'] = {}
+    feet_order=['left', 'right']
 
     for i, updown in enumerate(updown_estimations):
-        parameters['duty_cycle'][i] = duty_cycle(updown)
+        parameters['duty_cycle'][feet_order[i]] = duty_cycle(updown)
 
     with open(filename, 'w') as f:
         yaml.dump(parameters, f, default_flow_style=False)
@@ -37,4 +38,5 @@ def duty_cycle(updown_with_nans):
 
     # Calculate the duty cycle = time_foot_is_down / total_time
     duty_cycle = mean_frames_per_down / (mean_frames_per_down + mean_frames_per_up)
+
     return float(duty_cycle)
