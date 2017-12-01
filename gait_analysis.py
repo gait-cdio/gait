@@ -173,7 +173,7 @@ errors = np.zeros((num_groundtruth_tracks, num_estimated_tracks))
 if updown_groundtruth is not None:
     # TODO----------------------------------------------------------------
     # THIS RE-ORDERING CODE IS OBSOLETE WITH THE INTRODUCTION OF LEFT-RIGHT CHECKS.
-    # BOTH GROUND TRUTH AND ESTIMATIONS COME IN THE ORDER [left_track, right_track]
+    # BOTH GROUND TRUTH AND ESTIMATIONS COME IN THE ORDER [left_foot_track, right_foot_track]
     # AND THUS REQUIRES NO FURTHER ORDERING
     #---------------------------------------------------------------------
 
@@ -215,6 +215,6 @@ plt.show()
 # |                     Write stride results to file                           |
 # +----------------------------------------------------------------------------+
 
-dc = stride_parameters.write_gait_parameters_to_file('output-data/gait.yaml', updown_estimations)
+dc = stride_parameters.write_gait_parameters_to_file('output-data/gait.yaml', updown_estimations, tracks[0].fps)
 
 print('Done and done.')
