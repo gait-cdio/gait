@@ -94,28 +94,30 @@ def est_up_down(conc_track, estimations, derivatives, direction, max_frame, appl
 def estimate_detrend(tracks, dir_dict, max_frame, applicability_std=1.3, blur_std=3, up_thresh=0.25, down_thresh=0.45):
     estimations = []
     derivatives = []
-    used_indexes = np.zeros(2, )
+    used_indexes = np.zeros(2, ) * np.nan
 
     # Left foot first
     if (len(dir_dict['left_foot']) == 2):
         index = dir_dict['left_foot']['toe']
         track = tracks[index]
-    else:
-        index = dir_dict['left_foot']
+    elif(len(dir_dict['left_foot']) == 1):
+        index = dir_dict['left_foot']['foot']
         track = tracks[index]
-    est_up_down(track, estimations, derivatives, dir_dict['movement_direction'], max_frame, applicability_std, blur_std, up_thresh, down_thresh)
 
-    used_indexes[0] = index
+    if(len(dir_dict['left_foot'])):
+        est_up_down(track, estimations, derivatives, dir_dict['movement_direction'], max_frame, applicability_std, blur_std, up_thresh, down_thresh)
+        used_indexes[0] = index
 
     # Then right foot
     if (len(dir_dict['right_foot']) == 2):
         index = dir_dict['right_foot']['toe']
         track = tracks[index]
-    else:
-        index = dir_dict['right_foot']
+    elif (len(dir_dict['right_foot']) == 1):
+        index = dir_dict['right_foot']['foot']
         track = tracks[index]
-    est_up_down(track, estimations, derivatives, dir_dict['movement_direction'], max_frame, applicability_std, blur_std, up_thresh, down_thresh)
 
-    used_indexes[1] = index
+    if(len(dir_dict['right_foot'])):
+        est_up_down(track, estimations, derivatives, dir_dict['movement_direction'], max_frame, applicability_std, blur_std, up_thresh, down_thresh)
+        used_indexes[1] = index
 
     return estimations, derivatives, used_indexes
