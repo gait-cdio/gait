@@ -4,9 +4,13 @@ import os
 
 
 def mouse_callback(event, x, y, flags, pos_anno):
-    if event == cv2.EVENT_LBUTTONDOWN:
+    left_button_is_down = flags & cv2.EVENT_FLAG_LBUTTON
+    if event == cv2.EVENT_LBUTTONDOWN or left_button_is_down:
         if marked != 0:
             pos_anno[frame, marked - 1] = (x, y)
+    elif event == cv2.EVENT_RBUTTONDOWN:
+        if marked != 0:
+            pos_anno[frame, marked - 1] = (np.nan, np.nan)
 
 
 def interpolate_keypoints(pos_anno):
@@ -25,7 +29,7 @@ def interpolate_keypoints(pos_anno):
 if __name__ != "__main__":
     exit(0)
 
-filename = 'john_markerless/john_markerless_%04d.jpg'
+filename = 'kevin_markerless/kevin_markerless_%04d.jpg'
 
 if '%04d' in filename:
     video_name = os.path.split(filename)[1].split('_%04d')[0]
