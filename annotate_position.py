@@ -29,7 +29,7 @@ def interpolate_keypoints(pos_anno):
 if __name__ != "__main__":
     exit(0)
 
-filename = 'kevin_markerless/kevin_markerless_%04d.jpg'
+filename = 'rolf_markerless/rolf_markerless_%04d.jpg'
 
 if '%04d' in filename:
     video_name = os.path.split(filename)[1].split('_%04d')[0]
