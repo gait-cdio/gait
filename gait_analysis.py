@@ -32,7 +32,7 @@ utils.create_necessary_dirs(['hsv-threshold-settings',
                              'TrackerResults',
                              'openpose-data'])
 
-args = parse_arguments()
+# args = parse_arguments()
 args = start_menu()
 plt.ioff()
 
