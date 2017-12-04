@@ -66,7 +66,7 @@ while loop:
     cv2.putText(im, 'Quit: q', (0, 25), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'Reset r', (0, 55), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'Save S (shift + s)', (0, 70), fontFace=font, fontScale=0.5, color=(0, 0, 255))
-    cv2.putText(im, 'Mark: Mouseclick', (0, 85), fontFace=font, fontScale=0.5, color=(0, 0, 255))
+    cv2.putText(im, 'Mark: Mouseclick (set with left, remove with right)', (0, 85), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'Interpolate: !', (0, 100), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'Change markers: i,k,o,l,p', (0, 115), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     cv2.putText(im, 'Frame:' + str(frame), (0, 130), fontFace=font, fontScale=0.5, color=(0, 0, 255))
@@ -110,7 +110,7 @@ while loop:
         elif pressed_key == ord('l'):
             marked = 4
         elif pressed_key == ord('p'):
-            pos_anno[frame, :, :] = 0
+            marked = 0
         elif pressed_key == ord('!'):
             interpolate_keypoints(pos_anno)
         elif pressed_key == ord('S'):
