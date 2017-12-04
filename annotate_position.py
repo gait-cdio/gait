@@ -10,17 +10,16 @@ def mouse_callback(event, x, y, flags, pos_anno):
 
 
 def interpolate_keypoints(pos_anno):
-    interpolated = np.copy(pos_anno)
     nframes, nblobs, npos = pos_anno.shape
     for blob in range(nblobs):
         for pos in range(npos):
             missing_frames = np.where(np.isnan(pos_anno[:, blob, pos]))[0]
             existing_frames = np.where(~np.isnan(pos_anno[:, blob, pos]))[0]
             if existing_frames.size:
-                interpolated[missing_frames, blob, pos] = np.interp(missing_frames,
-                                                                existing_frames, pos_anno[existing_frames, blob, pos],
-                                                                    left=np.nan, right=np.nan)
-    return interpolated
+                pos_anno[missing_frames, blob, pos] = np.interp(missing_frames,
+                                                                existing_frames,
+                                                                pos_anno[existing_frames, blob, pos],
+                                                                left=np.nan, right=np.nan)
 
 
 if __name__ != "__main__":
@@ -39,9 +38,6 @@ height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 nframes = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 fps = cap.get(cv2.CAP_PROP_FPS)
 
-cv2.namedWindow('Gait Annotator', cv2.WINDOW_NORMAL)
-cv2.resizeWindow('Gait Annotator', width, height)
-
 frame = 0
 marked = 0
 try:
@@ -54,7 +50,7 @@ cv2.setMouseCallback('Position Annotator', mouse_callback, pos_anno)
 cv2.resizeWindow('Position Annotator', width, height)
 font = cv2.FONT_HERSHEY_TRIPLEX
 notations = ['empty', 'Left Toe', 'Left Heel', 'Right Toe', 'Right Heel']
-blob_color = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 0, 0)]
+blob_color = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 255, 255)]
 
 loop = True
 cap.set(1, frame)
@@ -72,7 +68,7 @@ while loop:
     cv2.putText(im, 'Frame:' + str(frame), (0, 130), fontFace=font, fontScale=0.5, color=(0, 0, 255))
     if marked != 0:
         cv2.putText(im, notations[marked], (0, height - 40), fontFace=font, fontScale=3,
-                    color=(0, 0, 255))
+                    color=blob_color[marked - 1])
         cv2.putText(im, "Last clicked position: {}, {}".format(*pos_anno[frame, marked - 1]), (0, height - 160),
                     fontFace=font, fontScale=0.5, color=(0, 0, 255))
     for blob in range(4):
@@ -112,7 +108,7 @@ while loop:
         elif pressed_key == ord('p'):
             pos_anno[frame, :, :] = 0
         elif pressed_key == ord('!'):
-            pos_anno = interpolate_keypoints(pos_anno)
+            interpolate_keypoints(pos_anno)
         elif pressed_key == ord('S'):
             np.save('annotations/' + video_name + '-positions', pos_anno)
         else:
