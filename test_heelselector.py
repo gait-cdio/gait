@@ -14,33 +14,29 @@ import test_dl_utils
 def selectHeel(image):
     img = np.copy(image)
     cv2.namedWindow("Bild")
+    roi = cv2.selectROI("Bild", img)
+    cv2.destroyAllWindows()
+    cv2.normalize(img, img, dtype=cv2.CV_32F)
+    x, y, w, h = roi
+    height, width, _ = img.shape
+    mask = np.zeros([height, width])
+    mask[y:y + h, x:x + w] = 1
 
-    if ret:
-        roi = cv2.selectROI("Bild", img)
-        cv2.destroyAllWindows()
-        cv2.normalize(img, img, dtype=cv2.CV_32F)
-        x, y, w, h = roi
-        height, width, _ = img.shape
-        mask = np.zeros([height, width])
-        mask[y:y + h, x:x + w] = 1
+    heelArray = []
+    coordArray = []
+    for i in range(x - 15, x + w - 15):
+        for k in range(y - 15, y + h - 15):
+            heelArray.append(img[k:k + 32, i:i + 32])
+            coordArray.append((i + 15, k + 15))
 
-        heelArray = []
-        coordArray = []
-        for i in range(x - 15, x + w - 15):
-            for k in range(y - 15, y + h - 15):
-                heelArray.append(img[k:k + 32, i:i + 32])
-                coordArray.append((i + 15, k + 15))
-
-        falseArray = []
-        for i in range(x - 32, x + w):
-            falseArray.append(img[y - 32:y, i:i + 32])
-            falseArray.append(img[y + h:y + h + 32, i:i + 32])
-        for i in range(y - 32, y + h):
-            falseArray.append(img[i:i + 32, x - 32:x])
-            falseArray.append(img[i:i + 32, x + w:x + w + 32])
-        return mask, np.array(heelArray), np.array(falseArray), coordArray
-    else:
-        return False
+    falseArray = []
+    for i in range(x - 32, x + w):
+        falseArray.append(img[y - 32:y, i:i + 32])
+        falseArray.append(img[y + h:y + h + 32, i:i + 32])
+    for i in range(y - 32, y + h):
+        falseArray.append(img[i:i + 32, x - 32:x])
+        falseArray.append(img[i:i + 32, x + w:x + w + 32])
+    return np.array(heelArray), np.array(falseArray), coordArray
 
 
 def separateDatasets(trueArray, falseArray, ratio=0.6):
@@ -51,7 +47,7 @@ def separateDatasets(trueArray, falseArray, ratio=0.6):
     # TODO(rolf): handle corner case with too few images (splitting index becomes < 0)
 
     train_images = np.concatenate((trueArray[:true_splitting_index], falseArray[:false_splitting_index]), axis=0)
-    val_images   = np.concatenate((trueArray[true_splitting_index:], falseArray[false_splitting_index:]), axis=0)
+    val_images = np.concatenate((trueArray[true_splitting_index:], falseArray[false_splitting_index:]), axis=0)
 
     train_labels = np.zeros(len(train_images), dtype="int")
     val_labels = np.zeros(len(val_images), dtype="int")
@@ -70,13 +66,13 @@ def separateDatasets(trueArray, falseArray, ratio=0.6):
             'val': TensorDataset(valTensor.float(), valInts)}
 
 
-cap = cv2.VideoCapture("input-videos/4farger.mp4")
-cap.set(1, 120)
+cap = cv2.VideoCapture("input-images/rolf_markerless/rolf_markerless_%04d.jpg")
+cap.set(1, 30)
 ret, image = cap.read()
 
 assert ret
 
-mask, iA, fA, _ = selectHeel(image)
+iA, fA, _ = selectHeel(image)
 
 np.random.shuffle(iA)
 np.random.shuffle(fA)
@@ -93,7 +89,7 @@ vgg.features = torch.nn.Sequential(*[vgg.features[i] for i in range(8)])
 for params in vgg.parameters():
     params.require_grad = False
 fc1 = torch.nn.Linear(32768, 32)
-fc2 = torch.nn.Linear(32,2)
+fc2 = torch.nn.Linear(32, 2)
 vgg.classifier = torch.nn.Sequential(fc1, fc2)
 
 if torch.cuda.is_available():
@@ -106,15 +102,19 @@ exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=1, gamma=0.1, l
 trained_model = test_dl_utils.train_model(vgg, criterion, optimizer_conv, exp_lr_scheduler, dataloaders,
                                           num_epochs=20)
 
-cap.set(1, 120)
+cap.set(1, 31)
 ret, image = cap.read()
 
 assert ret
 
-_, new_iA, new_fA, coords = selectHeel(image)
+new_iA, new_fA, coords = selectHeel(image)
 
 for index, coord in enumerate(coords):
-    out = trained_model(Variable(torch.from_numpy(new_iA[index]).permute(2, 0, 1).unsqueeze(0)).float().cuda())
+    out = trained_model(Variable(torch.from_numpy(new_iA[index])
+                                 .permute(2, 0, 1)
+                                 .unsqueeze(0))
+                        .float()
+                        .cuda())
     _, prediction = torch.max(out.data, dim=1)
 
     print('Predicted {}/{}: {}'.format(index + 1, len(coords), bool(prediction[0])))
