@@ -11,10 +11,10 @@ def annotationToUpDown(annotations):
     :param annotations:
     :return: np.ndarray
     """
-    left = 0
-    right = 0
-    bin = np.zeros((2, annotations.size))
-    for t in range(annotations.size):
+    left = np.nan
+    right = np.nan
+    bin = np.zeros((2, annotations.size))*np.nan
+    for t in range(np.trim_zeros(annotations,'b').size):
         if annotations[t] == 1:
             left = 1
         if annotations[t] == 2:

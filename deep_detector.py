@@ -1,7 +1,6 @@
 import cv2
-import numpy as np
 import torch
-import matplotlib.pyplot as py
+import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 import torch.optim as optim
 from torch.optim import lr_scheduler
