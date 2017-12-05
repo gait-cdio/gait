@@ -4,7 +4,7 @@ from recordclass import recordclass
 import pickle
 import os
 
-from gui import set_threshold
+from threshold_selector import set_threshold
 
 TrackerWithDetections = recordclass('TrackerWithDetections', ['tracker', 'detections'])
 

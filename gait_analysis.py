@@ -9,12 +9,8 @@ import pickle
 import colortracker
 import tracker
 import utils
-import validator
 import stride_parameters
-from colortracker import ColorTracker
 from footupdown import estimate_detrend
-from gait_argument_parser import parse_arguments
-from gui import set_threshold
 from utils import load_groundtruth
 from visualize_gait import visualize_gait
 from startmenu import start_menu

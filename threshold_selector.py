@@ -3,8 +3,6 @@ import numpy as np
 
 
 # TODO(John):
-# Möjligör flera olika trösklar
-# Bättre utnyttjade av klicket i bilden
 # Använda QT istället för openCVs GUI. openCV GUIt ska egentligen inte användas till mer än debugging. Därför finns ingen support för knappar o.s.v.
 
 # markerThreshold = namedtuple('markerThreshold', 'jointName lowerBound upperBound') # Tänker mig en sån här grej för att spara värden
