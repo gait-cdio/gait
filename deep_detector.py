@@ -83,13 +83,14 @@ dataloaders = {x: torch.utils.data.DataLoader(footDataset[x], batch_size=50,
                for x in ['train', 'val']}
 
 vgg = torchvision.models.vgg19(pretrained=True)
-vgg.features = torch.nn.Sequential(*[vgg.features[i] for i in range(8)])
+vgg.features = torch.nn.Sequential(*[vgg.features[i] for i in range(4)])
 
 for params in vgg.parameters():
     params.require_grad = False
-fc1 = torch.nn.Linear(32768, 32)
+fc1 = torch.nn.Linear(65536, 32)
+rel = torch.nn.ReLU()
 fc2 = torch.nn.Linear(32, 2)
-vgg.classifier = torch.nn.Sequential(fc1, fc2)
+vgg.classifier = torch.nn.Sequential(fc1, rel, fc2)
 
 if torch.cuda.is_available():
     vgg = vgg.cuda()
@@ -101,24 +102,25 @@ exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=1, gamma=0.1, l
 trained_model = test_dl_utils.train_model(vgg, criterion, optimizer_conv, exp_lr_scheduler, dataloaders,
                                           num_epochs=20)
 
-cap.set(1, 31)
-ret, image = cap.read()
+for frame in [31, 61, 91]:
+    cap.set(1, frame)
+    ret, image = cap.read()
 
-assert ret
+    assert ret
 
-new_iA, new_fA, coords = selectHeel(image)
+    new_iA, new_fA, coords = selectHeel(image)
 
-for index, coord in enumerate(coords):
-    out = trained_model(Variable(torch.from_numpy(new_iA[index])
-                                 .permute(2, 0, 1)
-                                 .unsqueeze(0))
-                        .float()
-                        .cuda())
-    _, prediction = torch.max(out.data, dim=1)
+    for index, coord in enumerate(coords):
+        out = trained_model(Variable(torch.from_numpy(new_iA[index])
+                                     .permute(2, 0, 1)
+                                     .unsqueeze(0))
+                            .float()
+                            .cuda())
+        _, prediction = torch.max(out.data, dim=1)
 
-    print('Predicted {}/{}: {}'.format(index + 1, len(coords), bool(prediction[0])))
-    if prediction[0]:
-        image[coord[1], coord[0]] = (0, 0, 255)
+        print('Predicted {}/{}: {}'.format(index + 1, len(coords), bool(prediction[0])))
+        if prediction[0]:
+            image[coord[1], coord[0]] = (0, 0, 255)
 
-cv2.imshow('Here it is', image)
-cv2.waitKey(0)
+    cv2.imshow('Here it is', image)
+    cv2.waitKey(0)
