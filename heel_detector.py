@@ -39,7 +39,7 @@ class ClickRecorder:
 
 has_graphics = bool(os.environ.get('DISPLAY'))
 
-select_points_interactively = False
+select_points_interactively = True
 
 if select_points_interactively:
     fig, ax = plt.subplots()
@@ -61,32 +61,36 @@ for click in clicks:
     x, y = range(width), range(height)
     xx, yy = np.meshgrid(y, x)
 
-    sigma = 10.0
+    sigma = 100.0
     groundtruth_output += np.exp(- ((xx - click[0]) ** 2 + (yy - click[1]) ** 2) / (2 * sigma ** 2))
 
 window_shape = (32, 32, 3)
-training_images = skimage.util.shape.view_as_windows(image, window_shape)
+training_images = skimage.util.shape.view_as_windows(image, window_shape, step=1)
+
+#training_samples = np.zeros(100, 32, 32, 3)
 
 reshaped_training_images = training_images.reshape(-1, 32, 32, 3)
-reshaped_groundtruth_output = groundtruth_output[16:-15, 16:-15].reshape(-1)
+groundtruth_windows = skimage.util.shape.view_as_windows(groundtruth_output, (32, 32), step=1)
+reshaped_groundtruth_output = groundtruth_windows.reshape(-1, 32, 32)[:, 15, 15]
+
+#for index, _ in enumerate(training_samples):
+
 
 dataset = torch.utils.data.TensorDataset(torch.ByteTensor(reshaped_training_images),
                                          torch.Tensor(reshaped_groundtruth_output))
 
 vgg = models.vgg11(pretrained=True)
 
-counter = 0
 for param in vgg.parameters():
     param.requires_grad = False
-    counter += 1
 
-input_params = vgg.classifier._modules['6'].in_features
-vgg.classifier._modules['6'] = torch.nn.Linear(input_params, 1)
+vgg.features = torch.nn.Sequential(*[vgg.features[i] for i in range(8)])
+vgg.classifier = torch.nn.Linear(16384, 1)
 
 vgg = vgg.cuda()
 
 lossfunction = torch.nn.MSELoss()
-optimizer = torch.optim.SGD(vgg.classifier[-1].parameters(), lr=0.001, momentum=0.9)
+optimizer = torch.optim.SGD(vgg.classifier.parameters(), lr=0.001, momentum=0.9)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
 
 for sample in dataset:
@@ -94,8 +98,7 @@ for sample in dataset:
 
     input = input.float().permute(2, 0, 1).unsqueeze_(0)
     groundtruth = torch.Tensor([groundtruth]).unsqueeze_(0)
-    print('input shape:', input.shape)
-    print('groundtruth shape:', groundtruth.shape)
+
     input, groundtruth = Variable(input).cuda(), Variable(groundtruth).cuda()
 
     optimizer.zero_grad()
