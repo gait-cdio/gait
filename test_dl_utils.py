@@ -52,7 +52,7 @@ def train_model(model, criterion, optimizer, scheduler, data_loaders, run_networ
 
                 # forward
                 outputs = run_network(model, inputs)
-                loss = criterion(outputs, truths)
+                loss = criterion(outputs.squeeze(1), truths)
 
                 # backward + optimize only if in training phase
                 if phase == 'train':
@@ -80,6 +80,18 @@ def train_model(model, criterion, optimizer, scheduler, data_loaders, run_networ
                 best_model_weights = model.state_dict()
 
         print()
+
+        # Bad debug plotting code below /Rolf
+        # fig, axes = plt.subplots(4, 4)
+        # for index, axis in enumerate(fig.axes):
+        #     out = run_network(model,
+        #                       Variable(data_loaders['train'].dataset.data_tensor[index]
+        #                                .permute(2, 0, 1)
+        #                                .unsqueeze(0))
+        #                       .float()
+        #                       .cuda())
+        # axis.imshow(out.data.cpu().numpy()[0, 0])
+        # fig.show()
 
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(

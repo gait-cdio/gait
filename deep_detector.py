@@ -2,6 +2,7 @@ import cv2
 import torch
 import os
 import matplotlib.pyplot as plt
+import matplotlib.cm as colormap
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 import torch.optim as optim
 from torch.optim import lr_scheduler
@@ -63,7 +64,7 @@ def get_groundtruth_filename(video_filename):
     return groundtruth_filename
 
 
-def load_groundtruth(video_filename):
+def load_groundtruth(video_filename, patch_size=64):
     groundtruth_filename = get_groundtruth_filename(video_filename)
 
     position_groundtruth = np.load(groundtruth_filename)
@@ -71,16 +72,20 @@ def load_groundtruth(video_filename):
     cap = cv2.VideoCapture(video_filename)
     num_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    input_patches = np.zeros(shape=(num_frames * 4, 64, 64, 3))
-    output_patches = np.zeros(shape=(num_frames * 4, 64, 64))
+    input_patches = np.zeros(shape=(num_frames * 4, patch_size, patch_size, 3))
+    output_patches = np.zeros(shape=(num_frames * 4, patch_size, patch_size))
+
+    left_toe, left_heel = 0, 1
+    right_toe, right_heel = 2, 3
+    interesting_body_parts = [left_heel, right_heel]
 
     sample_index = 0
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
     for frame_index in range(num_frames):
-        if np.all(np.isnan(position_groundtruth[frame_index, :, 0])):
+        if np.all(np.isnan(position_groundtruth[frame_index, interesting_body_parts, 0])):
             continue
 
-        # cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index) # This one takes time and is not needed, I think
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index) # This one takes time and is not needed, I think
         ret, image = cap.read()
         assert ret
 
@@ -91,24 +96,36 @@ def load_groundtruth(video_filename):
 
         sigma = 10.0
         interesting_positions = position_groundtruth[frame_index][
-            np.where(~np.isnan(position_groundtruth[frame_index, :, 0]))]
-        interesting_positions = list(filter(lambda a: 40 < a[0] < width - 40, interesting_positions))
+            np.where(~np.isnan(position_groundtruth[frame_index, interesting_body_parts, 0]))]
+        half_patch_size = patch_size // 2
+        interesting_positions = list(
+            filter(lambda a: half_patch_size < a[0] < width - half_patch_size, interesting_positions))
         for pos in interesting_positions:
             x, y = pos
             groundtruth_output += np.exp(- ((xx - x) ** 2 + (yy - y) ** 2) / (2 * sigma ** 2))
 
         for pos in interesting_positions:
             x, y = int(pos[0]), int(pos[1])
-            input_patches[sample_index] = image[y - 32:y + 32, x - 32:x + 32]
-            output_patches[sample_index] = groundtruth_output[y - 32:y + 32, x - 32:x + 32]
+            input_patches[sample_index] = (image[y - half_patch_size:y + half_patch_size,
+                                           x - half_patch_size:x + half_patch_size])
+            output_patches[sample_index] = (groundtruth_output[y - half_patch_size:y + half_patch_size,
+                                            x - half_patch_size:x + half_patch_size])
             sample_index += 1
 
     return input_patches, output_patches
 
 
-video_filename = "input-images/rolf_markerless/rolf_markerless_%04d.jpg"
-positive_examples, positive_example_outputs = load_groundtruth(video_filename)
+patch_size = 64
+half_patch_size = patch_size // 2
 
+input_data = {}
+output_data = {}
+for person in ['john', 'kevin', 'rolf']:
+    video_filename = "input-images/{}_markerless/{}_markerless_%04d.jpg".format(person, person)
+    input_data[person], output_data[person] = load_groundtruth(video_filename, patch_size=patch_size)
+
+positive_examples = np.concatenate(list(input_data.values()))
+positive_example_outputs = np.concatenate(list(output_data.values()))
 np.random.shuffle(positive_examples)
 np.random.shuffle(positive_example_outputs)
 
@@ -137,8 +154,8 @@ if torch.cuda.is_available():
     vgg = vgg.cuda()
 
 criterion = torch.nn.MSELoss()
-optimizer_conv = optim.SGD(vgg.classifier.parameters(), lr=1e-6)
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=1, gamma=0.1, last_epoch=-1)
+optimizer_conv = optim.SGD(vgg.classifier.parameters(), lr=1e-7)
+exp_lr_scheduler = lr_scheduler.ReduceLROnPlateau(optimizer_conv)
 
 trained_model = test_dl_utils.train_model(vgg, criterion, optimizer_conv, exp_lr_scheduler, data_loaders, run_network,
                                           num_epochs=50)
@@ -161,10 +178,11 @@ for frame in [31, 61, 91]:
     click_recorder = ClickRecorder(fig)
     plt.show()
 
+    maxes = []
     for index, coords in enumerate(click_recorder.clicks):
         x, y = int(coords[0]), int(coords[1])
-        col_low, col_high = max(0, x - 32), min(width, x + 32)
-        row_low, row_high = max(0, y - 32), min(height, y + 32)
+        col_low, col_high = max(0, x - half_patch_size), min(width, x + half_patch_size)
+        row_low, row_high = max(0, y - half_patch_size), min(height, y + half_patch_size)
 
         input_patch = image[row_low:row_high, col_low:col_high]
         out = run_network(trained_model,
@@ -175,9 +193,17 @@ for frame in [31, 61, 91]:
                           .cuda())
 
         output_patch = out.data.cpu().numpy()[0, 0]
+        lilpatch = output_patch[3:-3, 3:-3]
+        maxrow, maxcol = np.unravel_index(lilpatch.argmax(), lilpatch.shape)
+        maxrow += 3
+        maxcol += 3
+        maxes.append((maxrow + y - half_patch_size, maxcol + x - half_patch_size))
+
         grayscale_patch = np.stack((output_patch,) * 3, axis=-1)
         alpha = 1
         display_image[row_low:row_high, col_low:col_high] = alpha * grayscale_patch + (1 - alpha) * input_patch
 
     plt.imshow(display_image)
+    for y, x in maxes:
+        plt.scatter(x, y, c='blue', marker='x', s=24)
     plt.show()
