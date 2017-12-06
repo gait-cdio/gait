@@ -12,16 +12,14 @@ import time
 import os
 
 
-def train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=25):
+def train_model(model, criterion, optimizer, scheduler, data_loaders, run_network, num_epochs=25):
     since = time.time()
 
-    best_model_wts = model.state_dict()
-    best_acc = 0.0
+    best_model_weights = model.state_dict()
+    best_loss = np.inf
 
     train_losses = np.zeros(num_epochs)
     val_losses = np.zeros(num_epochs)
-    train_corrects = np.zeros(num_epochs, dtype=int)
-    val_corrects = np.zeros(num_epochs, dtype=int)
 
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
@@ -30,73 +28,68 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
             if phase == 'train':
-                scheduler.step()
                 model.train(True)  # Set model to training mode
             else:
                 model.train(False)  # Set model to evaluate mode
 
             running_loss = 0.0
-            running_corrects = 0
 
             # Iterate over data.
-            for data in dataloaders[phase]:
+            for data in data_loaders[phase]:
                 # get the inputs
-                inputs, labels = data
+                inputs, truths = data
 
                 # wrap them in Variable
                 if torch.cuda.is_available():
-                    inputs = Variable(inputs.permute(0,3,1,2).cuda())
-                    labels = Variable(labels.cuda())
+                    inputs = Variable(inputs.permute(0, 3, 1, 2).cuda())
+                    truths = Variable(truths.cuda())
                 else:
-                    inputs = inputs.permute(0,3,1,2)
-                    inputs, labels = Variable(inputs), Variable(labels)
+                    inputs = inputs.permute(0, 3, 1, 2)
+                    inputs, truths = Variable(inputs), Variable(truths)
 
                 # zero the parameter gradients
                 optimizer.zero_grad()
 
                 # forward
-                outputs = model(inputs)
-                _, preds = torch.max(outputs.data, 1)
-                loss = criterion(outputs, labels)
+                outputs = run_network(model, inputs)
+                loss = criterion(outputs, truths)
 
                 # backward + optimize only if in training phase
                 if phase == 'train':
                     loss.backward()
                     optimizer.step()
+                else:
+                    scheduler.step(loss.data[0])
 
                 # statistics
                 running_loss += loss.data[0] / len(inputs)
-                running_corrects += torch.sum(preds == labels.data)
 
             epoch_loss = running_loss
-            epoch_acc = running_corrects
 
             if phase == 'val':
                 val_losses[epoch] = epoch_loss
-                val_corrects[epoch] = epoch_acc
             else:
                 train_losses[epoch] = epoch_loss
-                train_corrects[epoch] = epoch_acc
 
-            print('{} Loss: {:.4f} Acc: {:.4f}'.format(
-                phase, epoch_loss, epoch_acc))
+            print('{} Loss: {:.4f}'.format(
+                phase, epoch_loss))
 
             # deep copy the model
-            if phase == 'val' and epoch_acc > best_acc:
-                best_acc = epoch_acc
-                best_model_wts = model.state_dict()
+            if phase == 'val' and epoch_loss < best_loss:
+                best_loss = epoch_loss
+                best_model_weights = model.state_dict()
 
         print()
 
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(
         time_elapsed // 60, time_elapsed % 60))
-    print('Best val Acc: {:4f}'.format(best_acc))
+    print('Best validation loss: {:4f}'.format(best_loss))
 
     # load best model weights
-    model.load_state_dict(best_model_wts)
-    plt.semilogy(train_losses, label='Training data')
-    plt.semilogy(val_losses, label='Validation data')
+    model.load_state_dict(best_model_weights)
+    plt.semilogy(train_losses, label='Training loss')
+    plt.semilogy(val_losses, label='Validation loss')
     plt.legend()
     plt.show()
     return model

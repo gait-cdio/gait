@@ -118,6 +118,13 @@ data_loaders = {x: torch.utils.data.DataLoader(foot_dataset[x], batch_size=50,
                                                shuffle=True, num_workers=1)
                 for x in ['train', 'val']}
 
+
+def run_network(network, x):
+    x = network.features(x)
+    x = network.classifier(x)
+    return x
+
+
 vgg = torchvision.models.vgg19(pretrained=True)
 vgg.features = torch.nn.Sequential(*[vgg.features[i] for i in range(4)])
 
@@ -133,7 +140,7 @@ criterion = torch.nn.MSELoss()
 optimizer_conv = optim.SGD(vgg.classifier.parameters(), lr=1e-6)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=1, gamma=0.1, last_epoch=-1)
 
-trained_model = test_dl_utils.train_model(vgg, criterion, optimizer_conv, exp_lr_scheduler, data_loaders,
+trained_model = test_dl_utils.train_model(vgg, criterion, optimizer_conv, exp_lr_scheduler, data_loaders, run_network,
                                           num_epochs=50)
 
 cap = cv2.VideoCapture(video_filename)
@@ -160,11 +167,12 @@ for frame in [31, 61, 91]:
         row_low, row_high = max(0, y - 32), min(height, y + 32)
 
         input_patch = image[row_low:row_high, col_low:col_high]
-        out = trained_model(Variable(torch.from_numpy(input_patch)
-                                     .permute(2, 0, 1)
-                                     .unsqueeze(0))
-                            .float()
-                            .cuda())
+        out = run_network(trained_model,
+                          Variable(torch.from_numpy(input_patch)
+                                   .permute(2, 0, 1)
+                                   .unsqueeze(0))
+                          .float()
+                          .cuda())
 
         output_patch = out.data.cpu().numpy()[0, 0]
         grayscale_patch = np.stack((output_patch,) * 3, axis=-1)
