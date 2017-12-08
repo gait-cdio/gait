@@ -10,33 +10,13 @@ from PIL import Image
 
 import matplotlib.pyplot as plt
 
-data_dir = '../input-images/john_markerless'
-image = np.array(Image.open(os.path.join(data_dir, 'john_markerless_0033.jpg')))
+# data_dir = '../input-images/john_markerless'
+# image = np.array(Image.open(os.path.join(data_dir, 'john_markerless_0033.jpg')))
 
 
-class ClickRecorder:
-    def __init__(self, fig):
-        self.cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
-        self.clicks = []
-        self.markers = None
-
-    def onclick(self, event):
-        if event.button == 1:
-            if event.xdata is not None and event.ydata is not None:
-                self.clicks.append((event.xdata, event.ydata))
-        elif event.button == 3:
-            new_click = event.xdata, event.ydata
-            self.clicks = list(
-                filter(lambda click: np.linalg.norm((click[0] - new_click[0], click[1] - new_click[1])) > 10,
-                       self.clicks))
-
-        if self.markers is not None:
-            self.markers.remove()
-        self.markers = plt.scatter([click[0] for click in self.clicks],
-                                   [click[1] for click in self.clicks], s=20, marker='x', c='red')
-        plt.show()
 
 
+"""
 has_graphics = bool(os.environ.get('DISPLAY'))
 
 select_points_interactively = True
@@ -110,3 +90,4 @@ for sample in dataset:
 
     loss.backward()
     optimizer.step()
+"""

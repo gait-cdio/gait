@@ -118,23 +118,28 @@ def load_groundtruth(video_filename, patch_size=64):
 patch_size = 64
 half_patch_size = patch_size // 2
 
-input_data = {}
-output_data = {}
-for person in ['john', 'kevin', 'rolf']:
+train = False
+
+if train:
+    input_data = {}
+    output_data = {}
+    for person in ['john', 'kevin', 'rolf']:
+        video_filename = "input-images/{}_markerless/{}_markerless_%04d.jpg".format(person, person)
+        input_data[person], output_data[person] = load_groundtruth(video_filename, patch_size=patch_size)
+
+    positive_examples = np.concatenate(list(input_data.values()))
+    positive_example_outputs = np.concatenate(list(output_data.values()))
+    np.random.shuffle(positive_examples)
+    np.random.shuffle(positive_example_outputs)
+
+    foot_dataset = separate_dataset_into_train_val(positive_examples, positive_example_outputs)
+
+    data_loaders = {x: torch.utils.data.DataLoader(foot_dataset[x], batch_size=50,
+                                                   shuffle=True, num_workers=1)
+                    for x in ['train', 'val']}
+else:
+    person = 'john'
     video_filename = "input-images/{}_markerless/{}_markerless_%04d.jpg".format(person, person)
-    input_data[person], output_data[person] = load_groundtruth(video_filename, patch_size=patch_size)
-
-positive_examples = np.concatenate(list(input_data.values()))
-positive_example_outputs = np.concatenate(list(output_data.values()))
-np.random.shuffle(positive_examples)
-np.random.shuffle(positive_example_outputs)
-
-foot_dataset = separate_dataset_into_train_val(positive_examples, positive_example_outputs)
-
-data_loaders = {x: torch.utils.data.DataLoader(foot_dataset[x], batch_size=50,
-                                               shuffle=True, num_workers=1)
-                for x in ['train', 'val']}
-
 
 def run_network(network, x):
     x = network.features(x)
@@ -142,23 +147,29 @@ def run_network(network, x):
     return x
 
 
-vgg = torchvision.models.vgg19(pretrained=True)
-vgg.features = torch.nn.Sequential(*[vgg.features[i] for i in range(4)])
+if train:
+    vgg = torchvision.models.vgg19(pretrained=True)
+    vgg.features = torch.nn.Sequential(*[vgg.features[i] for i in range(4)])
 
-for params in vgg.parameters():
-    params.require_grad = False
+    for params in vgg.parameters():
+        params.require_grad = False
 
-vgg.classifier = torch.nn.Conv2d(64, 1, kernel_size=3, padding=1)
+    vgg.classifier = torch.nn.Conv2d(64, 1, kernel_size=3, padding=1)
 
-if torch.cuda.is_available():
-    vgg = vgg.cuda()
+    if torch.cuda.is_available():
+        vgg = vgg.cuda()
 
-criterion = torch.nn.MSELoss()
-optimizer_conv = optim.SGD(vgg.classifier.parameters(), lr=1e-7)
-exp_lr_scheduler = lr_scheduler.ReduceLROnPlateau(optimizer_conv)
+    criterion = torch.nn.MSELoss()
+    optimizer_conv = optim.SGD(vgg.classifier.parameters(), lr=1e-7)
+    exp_lr_scheduler = lr_scheduler.ReduceLROnPlateau(optimizer_conv)
 
-trained_model = test_dl_utils.train_model(vgg, criterion, optimizer_conv, exp_lr_scheduler, data_loaders, run_network,
-                                          num_epochs=50)
+    trained_model = test_dl_utils.train_model(vgg, criterion, optimizer_conv, exp_lr_scheduler, data_loaders, run_network,
+                                              num_epochs=50)
+
+    torch.save(trained_model.state_dict(), "cnnetworks/deeptracker_state_dict")
+    torch.save(trained_model, "cnnetworks/deeptracker")
+else:
+    trained_model = torch.load("cnnetworks/deeptracker")
 
 cap = cv2.VideoCapture(video_filename)
 
@@ -199,9 +210,11 @@ for frame in [31, 61, 91]:
         maxcol += 3
         maxes.append((maxrow + y - half_patch_size, maxcol + x - half_patch_size))
 
-        grayscale_patch = np.stack((output_patch,) * 3, axis=-1)
+        clamped = np.fmax(np.zeros(lilpatch.shape), lilpatch)
+        grayscale_patch = np.array(np.stack((clamped,) * 3, axis=-1) * 255 / np.max(clamped), dtype=np.uint8)
+
         alpha = 1
-        display_image[row_low:row_high, col_low:col_high] = alpha * grayscale_patch + (1 - alpha) * input_patch
+        display_image[row_low+3:row_high-3, col_low+3:col_high-3] = alpha * grayscale_patch + (1 - alpha) * input_patch[3:-3, 3:-3]
 
     plt.imshow(display_image)
     for y, x in maxes:

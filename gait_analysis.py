@@ -167,36 +167,6 @@ errors = np.zeros((num_groundtruth_tracks, num_estimated_tracks))
 
 # If we have ground truth, sort both lists according to which match the best before visualizing
 if updown_groundtruth is not None:
-    # TODO----------------------------------------------------------------
-    # THIS RE-ORDERING CODE IS OBSOLETE WITH THE INTRODUCTION OF LEFT-RIGHT CHECKS.
-    # BOTH GROUND TRUTH AND ESTIMATIONS COME IN THE ORDER [left_foot_track, right_foot_track]
-    # AND THUS REQUIRES NO FURTHER ORDERING
-    #---------------------------------------------------------------------
-
-    #for row, groundtruth in enumerate(updown_groundtruth):
-    #    for col, estimation in enumerate(updown_estimations):
-    #        errors[row, col] = validator.error(groundtruth, estimation, 0.1)
-
-    # Find similarity pairs
-    #matches = utils.greedy_similarity_match(errors, similarity_threshold=0.3)
-
-    # Build new lists with the correct order for each pair in 'matches'
-    #ordered_groundtruth = []
-    #ordered_estimations = []
-    #matched_estimation_indices = []
-    #for groundtruth_index, estimation_index in matches:
-    #    ordered_groundtruth.append(updown_groundtruth[groundtruth_index])
-    #    ordered_estimations.append(updown_estimations[estimation_index])
-    #    matched_estimation_indices.append(estimation_index)
-
-    # Find the set of estimations without a ground truth correspondance and add them last in the list
-    #unmatched_estimation_indices = list(set(range(len(updown_estimations))) - set(matched_estimation_indices))
-    #ordered_estimations += [updown_estimations[index] for index in unmatched_estimation_indices]
-
-    # Visualize it
-    #gait_cycle_fig = visualize_gait(ordered_groundtruth, color='green', offset=-1, label='Ground truth')
-    #visualize_gait(ordered_estimations, fig=gait_cycle_fig, label='Estimated')
-
     gait_cycle_fig = visualize_gait(updown_groundtruth, color='green', offset=-1, label='Ground truth')
     visualize_gait(updown_estimations, fig=gait_cycle_fig, label='Estimated')
 else:
@@ -211,6 +181,7 @@ plt.show()
 # |                     Write stride results to file                           |
 # +----------------------------------------------------------------------------+
 
-dc = stride_parameters.write_gait_parameters_to_file('output-data/gait.yaml', updown_estimations, tracks[0].fps)
+dc = stride_parameters.write_gait_parameters_to_file('output-data/{}.yaml'.format(filename_base), updown_estimations,
+                                                     tracks[0].fps)
 
 print('Done and done.')
