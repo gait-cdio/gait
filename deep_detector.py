@@ -64,8 +64,15 @@ def get_groundtruth_filename(video_filename):
     return groundtruth_filename
 
 
-def load_groundtruth(video_filename, patch_size=64):
+def load_groundtruth(video_filename, patch_size=64, cached=False):
     groundtruth_filename = get_groundtruth_filename(video_filename)
+
+    input_cache_filename = groundtruth_filename + '_input_cache.npy'
+    output_cache_filename = groundtruth_filename + '_output_cache.npy'
+
+    if os.path.isfile(input_cache_filename):
+        print("Found cached groundtruth data!")
+        return np.load(input_cache_filename), np.load(output_cache_filename)
 
     position_groundtruth = np.load(groundtruth_filename)
 
@@ -97,42 +104,56 @@ def load_groundtruth(video_filename, patch_size=64):
         sigma = 10.0
         interesting_positions = position_groundtruth[frame_index][
             np.where(~np.isnan(position_groundtruth[frame_index, interesting_body_parts, 0]))]
+
         half_patch_size = patch_size // 2
+
+        def sample_image(image, x, y):
+            return image[y - half_patch_size:y + half_patch_size,
+                   x - half_patch_size:x + half_patch_size]
+
         interesting_positions = list(
-            filter(lambda a: half_patch_size < a[0] < width - half_patch_size, interesting_positions))
+            filter(lambda a:
+                       half_patch_size < a[0] < width - half_patch_size
+                       and
+                       half_patch_size < a[1] < height - half_patch_size,
+                   interesting_positions))
         for pos in interesting_positions:
             x, y = pos
             groundtruth_output += np.exp(- ((xx - x) ** 2 + (yy - y) ** 2) / (2 * sigma ** 2))
 
         for pos in interesting_positions:
             x, y = int(pos[0]), int(pos[1])
-            input_patches[sample_index] = (image[y - half_patch_size:y + half_patch_size,
-                                           x - half_patch_size:x + half_patch_size])
-            output_patches[sample_index] = (groundtruth_output[y - half_patch_size:y + half_patch_size,
-                                            x - half_patch_size:x + half_patch_size])
+            input_patches[sample_index] = sample_image(image, x, y)
+            output_patches[sample_index] = sample_image(groundtruth_output, x, y)
             sample_index += 1
 
+    input_patches = input_patches[:sample_index]
+    output_patches = output_patches[:sample_index]
+    np.save(input_cache_filename, input_patches)
+    np.save(output_cache_filename, output_patches)
     return input_patches, output_patches
 
 
-patch_size = 64
+patch_size = 128
 half_patch_size = patch_size // 2
 
-train = False
+train = True
 
 if train:
     input_data = {}
     output_data = {}
     for person in ['john', 'kevin', 'rolf']:
         video_filename = "input-images/{}_markerless/{}_markerless_%04d.jpg".format(person, person)
-        input_data[person], output_data[person] = load_groundtruth(video_filename, patch_size=patch_size)
+        print("Loading data for {} ...".format(person))
+        input_data[person], output_data[person] = load_groundtruth(video_filename, patch_size=patch_size, cached=True)
+        print("Loaded data for {}.".format(person))
 
-    positive_examples = np.concatenate(list(input_data.values()))
-    positive_example_outputs = np.concatenate(list(output_data.values()))
-    np.random.shuffle(positive_examples)
-    np.random.shuffle(positive_example_outputs)
+    training_examples = np.concatenate(list(input_data.values()))
+    training_example_outputs = np.concatenate(list(output_data.values()))
+    np.random.shuffle(training_examples)
+    np.random.shuffle(training_example_outputs)
 
-    foot_dataset = separate_dataset_into_train_val(positive_examples, positive_example_outputs)
+    foot_dataset = separate_dataset_into_train_val(training_examples, training_example_outputs)
 
     data_loaders = {x: torch.utils.data.DataLoader(foot_dataset[x], batch_size=50,
                                                    shuffle=True, num_workers=1)
@@ -140,6 +161,7 @@ if train:
 else:
     person = 'john'
     video_filename = "input-images/{}_markerless/{}_markerless_%04d.jpg".format(person, person)
+
 
 def run_network(network, x):
     x = network.features(x)
@@ -161,15 +183,30 @@ if train:
 
     criterion = torch.nn.MSELoss()
     optimizer_conv = optim.SGD(vgg.classifier.parameters(), lr=1e-7)
+    num_epochs = 300
     exp_lr_scheduler = lr_scheduler.ReduceLROnPlateau(optimizer_conv)
 
     trained_model = test_dl_utils.train_model(vgg, criterion, optimizer_conv, exp_lr_scheduler, data_loaders, run_network,
-                                              num_epochs=50)
+                                              num_epochs=num_epochs)
 
     torch.save(trained_model.state_dict(), "cnnetworks/deeptracker_state_dict")
     torch.save(trained_model, "cnnetworks/deeptracker")
 else:
     trained_model = torch.load("cnnetworks/deeptracker")
+
+
+def classify_pixels(image):
+    out = run_network(trained_model,
+                      Variable(torch.from_numpy(image)
+                               .permute(2, 0, 1)
+                               .unsqueeze(0))
+                      .float()
+                      .cuda())
+
+    output_patch = out.data.cpu().numpy()[0, 0]
+    lilpatch = output_patch[3:-3, 3:-3]
+
+    return lilpatch
 
 cap = cv2.VideoCapture(video_filename)
 

@@ -100,8 +100,8 @@ def train_model(model, criterion, optimizer, scheduler, data_loaders, run_networ
 
     # load best model weights
     model.load_state_dict(best_model_weights)
-    plt.semilogy(train_losses, label='Training loss')
-    plt.semilogy(val_losses, label='Validation loss')
+    plt.plot(train_losses, label='Training loss')
+    plt.plot(val_losses, label='Validation loss')
     plt.legend()
     plt.show()
     return model
