@@ -44,4 +44,3 @@ with open('ankles.pkl', 'wb') as f:
 with open('ankles.pkl', 'rb') as f:
     all_ankles_loaded = pickle.load(f)
 # all_ankles_loaded = np.load('openpose-data/4farger.detections.openpose.npy')
-print('...')
