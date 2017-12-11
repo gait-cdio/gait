@@ -52,9 +52,9 @@ def greedy_similarity_match(input_mat, similarity_threshold):
     return match_list
 
 
-def load_groundtruth(filename):
+def load_updown_groundtruth(filename):
     footstates = np.load(filename)
-    return annotationToUpDown(footstates)
+    return footstates
 
 def create_necessary_dirs(dir_names):
     for d in dir_names:

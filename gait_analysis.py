@@ -11,7 +11,7 @@ import tracker
 import utils
 import stride_parameters
 from footupdown import estimate_detrend
-from utils import load_groundtruth
+from utils import load_updown_groundtruth
 from visualize_gait import visualize_gait
 from startmenu import start_menu
 import subprocess as sp
@@ -128,7 +128,7 @@ filename_base = os.path.splitext(args.filename)[0]
 groundtruth_filename = 'annotations/' + filename_base + '-up_down.npy'
 
 if os.path.isfile(groundtruth_filename):
-    updown_groundtruth = load_groundtruth(groundtruth_filename)
+    updown_groundtruth = load_updown_groundtruth(groundtruth_filename)
 
     xleftfoot = axes[0, 0].plot(3000 * updown_groundtruth[0, :], 'o-', markersize=2,
                                 label='ground truth up/down, left foot')
