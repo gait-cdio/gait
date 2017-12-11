@@ -33,10 +33,12 @@ filename = 'rolf_markerless/rolf_markerless_%04d.jpg'
 
 if '%04d' in filename:
     video_name = os.path.split(filename)[1].split('_%04d')[0]
+    directory = 'input-images/'
 else:
     video_name = os.path.splitext(filename)[0]
+    directory = 'input-videos/'
 
-cap = cv2.VideoCapture('input-images/' + filename)
+cap = cv2.VideoCapture(directory + filename)
 width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 nframes = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))

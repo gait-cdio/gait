@@ -4,15 +4,17 @@ import os
 
 import utils
 
-# filename = 'john_markerless/john_markerless_%04d.jpg'
-filename = '4farger.mp4'
+filename = 'kevin_markerless/kevin_markerless_%04d.jpg'
+# filename = '4fargersilly.mp4'
 
 if '%04d' in filename:
     video_name = os.path.split(filename)[1].split('_%04d')[0]
+    directory = 'input-images/'
 else:
     video_name = os.path.splitext(filename)[0]
+    directory = 'input-videos/'
 
-cap = cv2.VideoCapture('input-videos/' + filename)
+cap = cv2.VideoCapture(directory + filename)
 width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 nframes = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))

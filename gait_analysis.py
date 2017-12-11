@@ -32,8 +32,6 @@ utils.create_necessary_dirs(['hsv-threshold-settings',
 args = start_menu()
 plt.ioff()
 
-
-
 detections_filename = 'TrackerResults/' + args.filename + '.detections.pkl'
 tracks_filename = 'TrackerResults/' + args.filename + '.tracks.pkl'
 
@@ -47,7 +45,6 @@ elif args.method == 'markerless':
     detections = load_ankles_allframes('openpose-data/' + args.filename)
 else:
     detections = colortracker.detect(args.filename, number_of_trackers=args.numOfTrackers)
-
 
     with open(detections_filename, 'wb') as f:
         pickle.dump(detections, f)
