@@ -156,12 +156,12 @@ axes[0, 1].invert_yaxis()
 plt.show()
 
 
-# Validation
+# Validationqqqqqq
 # Better visualization of up/down estimation compared to ground truth. 1x1 plot
 num_groundtruth_tracks = updown_groundtruth.shape[0]
 num_estimated_tracks = len(updown_estimations)
 errors = np.zeros((num_groundtruth_tracks, num_estimated_tracks))
-
+np.save("output-data/" + filename_base + "_updown.npy",updown_estimations)
 # If we have ground truth, sort both lists according to which match the best before visualizing
 if updown_groundtruth is not None:
     gait_cycle_fig = visualize_gait(updown_groundtruth, color='green', offset=-1, label='Ground truth')
