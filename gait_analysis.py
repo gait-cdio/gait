@@ -93,4 +93,4 @@ if __name__ == "__main__":
     args = start_menu()
     plt.ioff()
 
-    gait_analysis(args)
+    gait_analysis(args, visualize = True)
