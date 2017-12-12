@@ -118,7 +118,7 @@ def feature_distance(distance_weight=1, size_weight=0, hue_weight=0, time_weight
         return d * distance_weight + s * size_weight + h * hue_weight + t * time_weight
     return closure
 
-def detect(filename, number_of_trackers=1, visualize=False):
+def detect(filename, number_of_trackers=1, visualize=False, set_thresholds=True):
     cap = cv2.VideoCapture('input-videos/' + filename)
     number_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
@@ -140,17 +140,23 @@ def detect(filename, number_of_trackers=1, visualize=False):
             with open(threshold_file, 'rb') as f:
                 default_thresholds = pickle.load(f)
         except FileNotFoundError:
-            default_thresholds = None
+            if not set_thresholds:
+                print("Error: No saved thresholds found for " + filename)
+                print("       Please set the thresholds for " + filename)
+                print("       before running with choose_new_thresholds = False")
+            else:
+                default_thresholds = None
+
+        if(set_thresholds):
+            thresholds = set_threshold(cap, default_thresholds)
+
+            # Save threshold settings
+            with open(threshold_file, 'wb') as f:
+                pickle.dump(thresholds, f)
 
         keypoint_tracker = ColorTracker()
-        thresholds = set_threshold(cap, default_thresholds)
         keypoint_tracker.hsv_min, keypoint_tracker.hsv_max = thresholds
-
         trackerList.append(TrackerWithDetections(tracker=keypoint_tracker, detections=[]))
-
-        # Save threshold settings
-        with open(threshold_file, 'wb') as f:
-            pickle.dump(thresholds, f)
 
     paused = False
 
