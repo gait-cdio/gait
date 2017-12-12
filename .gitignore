@@ -12,3 +12,5 @@ __pycache__/
 openpose-data/*
 
 output-data
+docs/vendor
+docs/.bundle
