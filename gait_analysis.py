@@ -16,6 +16,7 @@ from footleftright import left_foot_right_foot
 from utils import load_updown_groundtruth
 import validator
 
+
 def gait_analysis(args, visualize = False):
     detections_filename = 'TrackerResults/' + args.filename + '.detections.pkl'
     tracks_filename = 'TrackerResults/' + args.filename + '.tracks.pkl'
@@ -65,10 +66,7 @@ def gait_analysis(args, visualize = False):
     if os.path.isfile(groundtruth_filename):
         updown_groundtruth = load_updown_groundtruth(groundtruth_filename)
         score = validator.validate(updown_groundtruth, updown_estimations)
-        print("Score: " + str(score))
 
-
-    
     # +----------------------------------------------------------------------------+
     # |                     Write stride results to file                           |
     # +----------------------------------------------------------------------------+
@@ -91,6 +89,8 @@ def gait_analysis(args, visualize = False):
         visualize_gait.plot_detrended_coordinates(tracks, signal)
         visualize_gait.present_results(updown_estimations, x_derivatives, used_updown_indexes, tracks, number_frames, args)
         visualize_gait.visualize_gait(updown_estimations, args)
+
+    return score
 
 if __name__ == "__main__":
     utils.create_necessary_dirs(['hsv-threshold-settings', 
