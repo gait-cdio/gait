@@ -1,8 +1,5 @@
-import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import os.path
-from recordclass import recordclass
 from scipy import signal
 import pickle
 
@@ -11,13 +8,11 @@ import tracker
 import utils
 import stride_parameters
 from footupdown import estimate_detrend
-from utils import load_updown_groundtruth
 import visualize_gait
 from startmenu import start_menu
 import subprocess as sp
 from openpose_parser import load_ankles_allframes
 from footleftright import left_foot_right_foot
-from utils import Direction
 
 def gait_analysis(args, visualize = False):
     detections_filename = 'TrackerResults/' + args.filename + '.detections.pkl'
@@ -91,6 +86,6 @@ if __name__ == "__main__":
 
     # args = parse_arguments()
     args = start_menu()
-    plt.ioff()
+    # plt.ioff()
 
-    gait_analysis(args)
+    gait_analysis(args, visualize = True)

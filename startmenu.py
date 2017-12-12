@@ -6,7 +6,7 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QCoreApplication
 from collections import namedtuple
 
-returnArgs = namedtuple("returnArgs", "filename cached numOfTrackers method")
+returnArgs = namedtuple("returnArgs", "filename cached numOfTrackers method set_thresholds")
 
 class WelcomeWindow(QWidget):
     def __init__(self):
@@ -16,7 +16,11 @@ class WelcomeWindow(QWidget):
     def initUI(self):
         QToolTip.setFont(QFont('SansSerif', 10))
 
-        self.retArg = returnArgs(filename="4farger.mp4", cached=False, numOfTrackers=1, method='marker')
+        self.retArg = returnArgs(filename="4farger.mp4",
+                                 cached=False,
+                                 numOfTrackers=1,
+                                 method='marker',
+                                 set_thresholds=False)
 
         self.setToolTip('Brkstr')
         self.setGeometry(500,500,400,400)
