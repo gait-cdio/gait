@@ -13,6 +13,8 @@ from startmenu import start_menu
 import subprocess as sp
 from openpose_parser import load_ankles_allframes
 from footleftright import left_foot_right_foot
+from utils import load_updown_groundtruth
+import validator
 
 def gait_analysis(args, visualize = False):
     detections_filename = 'TrackerResults/' + args.filename + '.detections.pkl'
@@ -26,7 +28,9 @@ def gait_analysis(args, visualize = False):
         sp.call("./openpose_run.sh " + args.filename, shell=True)
         detections = load_ankles_allframes('openpose-data/' + args.filename)
     else:
-        detections = colortracker.detect(args.filename, number_of_trackers=args.numOfTrackers)
+        detections = colortracker.detect(args.filename, 
+                                         number_of_trackers=args.numOfTrackers,
+                                         set_thresholds = args.set_thresholds)
 
         with open(detections_filename, 'wb') as f:
             pickle.dump(detections, f)
@@ -51,6 +55,19 @@ def gait_analysis(args, visualize = False):
     # |                  Generate foot down/up, get derivatives                    |
     # +----------------------------------------------------------------------------+ 
     updown_estimations, x_derivatives, used_updown_indexes = estimate_detrend(tracks, dir_and_foot_pairs, max_frame=number_frames)
+
+    # +----------------------------------------------------------------------------+
+    # |            Calculate validation score if ground truth exists               |
+    # +----------------------------------------------------------------------------+ 
+    filename_base = os.path.splitext(args.filename)[0]
+    groundtruth_filename = 'annotations/' + filename_base + '-up_down.npy'
+
+    if os.path.isfile(groundtruth_filename):
+        updown_groundtruth = load_updown_groundtruth(groundtruth_filename)
+        score = validator.validate(updown_groundtruth, updown_estimations)
+        print("Score: " + str(score))
+
+
     
     # +----------------------------------------------------------------------------+
     # |                     Write stride results to file                           |
