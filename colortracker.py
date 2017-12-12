@@ -138,17 +138,17 @@ def detect(filename, number_of_trackers=1, visualize=False, set_thresholds=True)
                           basename + '-' + 'threshold' + str(i) + '.pkl')
         try:
             with open(threshold_file, 'rb') as f:
-                default_thresholds = pickle.load(f)
+                thresholds = pickle.load(f)
         except FileNotFoundError:
             if not set_thresholds:
                 print("Error: No saved thresholds found for " + filename)
                 print("       Please set the thresholds for " + filename)
                 print("       before running with choose_new_thresholds = False")
             else:
-                default_thresholds = None
+                thresholds = None
 
         if(set_thresholds):
-            thresholds = set_threshold(cap, default_thresholds)
+            thresholds = set_threshold(cap, thresholds)
 
             # Save threshold settings
             with open(threshold_file, 'wb') as f:
