@@ -21,30 +21,51 @@ def gait_validation(args):
     for method in methods:
         scores[method] = {}
 
-    for filename in sorted(os.listdir(args.path)):
-        if filename.endswith(".mp4"):
-            groundtruth_filename = os.path.splitext(filename)[0] + "-up_down.npy"
-            if os.path.isfile(os.path.join("annotations", groundtruth_filename)):
-                gait_args = namedtuple("args", 
-                                       "filename cached numOfTrackers method set_thresholds")
+    with open('validation-files.yaml', 'rb') as f:
+        evaluations_files = yaml.load(f)
+    for file_path in evaluations_files.keys():
 
-                gait_args.filename = filename
-                gait_args.cached = args.cached
-                gait_args.numOfTrackers = 4
-                gait_args.set_thresholds = False
+        path, file = os.path.split(file_path)
+        remove_tags = ['_%04d.jpg', '.mp4']
+        filename = file
+        for tag in remove_tags:
+            filename = filename.replace(tag, '')
 
-                for method in methods:
-                    print("Validating gait analysis on " + filename + " using the " + method + " method...")
-                    gait_args.method = method
-                    scores[method][filename] = gait_analysis(gait_args)
+        groundtruth_filename = filename + "-up_down.npy"
+        if os.path.isfile(os.path.join("annotations", groundtruth_filename)):
+            gait_args = namedtuple("args",
+                                   "filename cached numOfTrackers method set_thresholds")
 
-            else:
-                print("Warning: Ground truth for " + filename + " is missing.")
+            gait_args.filename = file
+            gait_args.cached = args.cached
+            gait_args.set_thresholds = False
+
+            for method in evaluations_files[file_path].keys():
+                print("Validating gait analysis on " + filename + " using the " + method + " method...")
+                gait_args.method = method
+                if method == 'marker':
+                    gait_args.numOfTrackers = evaluations_files[file_path][method]['num_of_trackers']
+                scores[method][filename] = gait_analysis(gait_args)
+
+        else:
+            print("Warning: Ground truth for " + filename + " is missing.")
 
     with open(os.path.join("output-data", 'validation-scores.yaml'), 'w') as f:
         yaml.dump(scores, f, default_flow_style=False)
 
 
 if __name__ == "__main__":
+    if True:
+        evaluations_files = {
+             'input-videos/4farger.mp4': {'marker': {'num_of_trackers': 4}, 'markerless': 'openpose'},
+             'input-videos/4fargersilly.mp4': {'marker': {'num_of_trackers': 4}, 'markerless': 'openpose'}
+            #'input-images/john_markerless/john_markerless_%04d.jpg': {'markerless': 'openpose'},
+            #'input-images/rolf_markerless/rolf_markerless_%04d.jpg': ['markerless'],
+            #'input-images/kevin_markerless/kevin_markerless_%04d.jpg': ['markerless']
+        }
+
+        with open('validation-files.yaml', 'w') as f:
+            yaml.dump(evaluations_files, f, default_flow_style=False)
+
     args = parse_arguments()
     gait_validation(args)
