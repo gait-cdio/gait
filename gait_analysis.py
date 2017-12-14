@@ -18,6 +18,15 @@ import validator
 
 
 def gait_analysis(args, visualize = False):
+    if '%04d' in args.filename:
+        video_name = os.path.split(args.filename)[1].split('_%04d')[0]
+        directory = 'input-images/' + video_name + '/'
+    else:
+        video_name = os.path.splitext(args.filename)[0]
+        directory = 'input-videos/'
+
+    video_path = os.path.join(directory, args.filename)
+
     detections_filename = 'TrackerResults/' + args.filename + '.detections.pkl'
     tracks_filename = 'TrackerResults/' + args.filename + '.tracks.pkl'
 
@@ -26,12 +35,12 @@ def gait_analysis(args, visualize = False):
         with open(detections_filename, 'rb') as f:
             detections = pickle.load(f)
     elif args.method == 'markerless':
-        sp.call("./openpose_run.sh " + args.filename, shell=True)
-        detections = load_ankles_allframes('openpose-data/' + args.filename)
+        sp.call("./openpose_run.sh " + video_path, shell=True)
+        detections = load_ankles_allframes('openpose-data/' + video_path)
     else:
-        detections = colortracker.detect(args.filename, 
+        detections = colortracker.detect(video_path,
                                          number_of_trackers=args.numOfTrackers,
-                                         set_thresholds = args.set_thresholds)
+                                         set_thresholds=args.set_thresholds)
 
         with open(detections_filename, 'wb') as f:
             pickle.dump(detections, f)
@@ -60,8 +69,7 @@ def gait_analysis(args, visualize = False):
     # +----------------------------------------------------------------------------+
     # |            Calculate validation score if ground truth exists               |
     # +----------------------------------------------------------------------------+ 
-    filename_base = os.path.splitext(args.filename)[0]
-    groundtruth_filename = 'annotations/' + filename_base + '-up_down.npy'
+    groundtruth_filename = 'annotations/' + video_name + '-up_down.npy'
 
     if os.path.isfile(groundtruth_filename):
         updown_groundtruth = load_updown_groundtruth(groundtruth_filename)
@@ -75,11 +83,10 @@ def gait_analysis(args, visualize = False):
         pickle.dump(tracks, f)
 
     # Save updown estimations
-    filename_base = os.path.splitext(args.filename)[0]
-    np.save("output-data/" + filename_base + "_updown.npy",updown_estimations)
+    np.save("output-data/" + video_name + "_updown.npy",updown_estimations)
 
     # Save stride parameters
-    dc = stride_parameters.write_gait_parameters_to_file('output-data/{}.yaml'.format(filename_base), updown_estimations,
+    dc = stride_parameters.write_gait_parameters_to_file('output-data/{}.yaml'.format(video_name), updown_estimations,
                                                          tracks[0].fps)
 
     # +----------------------------------------------------------------------------+
@@ -91,6 +98,7 @@ def gait_analysis(args, visualize = False):
         visualize_gait.visualize_gait(updown_estimations, args)
 
     return score
+
 
 if __name__ == "__main__":
     utils.create_necessary_dirs(['hsv-threshold-settings', 

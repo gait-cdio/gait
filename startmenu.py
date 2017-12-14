@@ -20,7 +20,7 @@ class WelcomeWindow(QWidget):
                                  cached=False,
                                  numOfTrackers=1,
                                  method='marker',
-                                 set_thresholds=False)
+                                 set_thresholds=True)
 
         self.setToolTip('Brkstr')
         self.setGeometry(500,500,400,400)

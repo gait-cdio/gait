@@ -118,8 +118,9 @@ def feature_distance(distance_weight=1, size_weight=0, hue_weight=0, time_weight
         return d * distance_weight + s * size_weight + h * hue_weight + t * time_weight
     return closure
 
+
 def detect(filename, number_of_trackers=1, visualize=False, set_thresholds=True):
-    cap = cv2.VideoCapture('input-videos/' + filename)
+    cap = cv2.VideoCapture(filename)
     number_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     # +-----------------------------------------------------------------------+

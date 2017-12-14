@@ -8,8 +8,12 @@ from utils import load_updown_groundtruth
 
 def visualize_gait(updown_estimations, args):
     # Better visualization of up/down estimation compared to ground truth. 1x1 plot
-    filename_base = os.path.splitext(args.filename)[0]
-    groundtruth_filename = 'annotations/' + filename_base + '-up_down.npy'
+    if '%04d' in args.filename:
+        video_name = os.path.split(args.filename)[1].split('_%04d')[0]
+    else:
+        video_name = os.path.splitext(args.filename)[0]
+
+    groundtruth_filename = 'annotations/' + video_name + '-up_down.npy'
 
     if os.path.isfile(groundtruth_filename):
         updown_groundtruth = load_updown_groundtruth(groundtruth_filename)
@@ -112,19 +116,23 @@ def present_results(updown_estimations, x_derivatives, used_updown_indexes, trac
 
     # If it exists, add ground truth up/down to the subplots.
     updown_groundtruth = None
-    filename_base = os.path.splitext(args.filename)[0]
-    groundtruth_filename = 'annotations/' + filename_base + '-up_down.npy'
+
+    if '%04d' in args.filename:
+        video_name = os.path.split(args.filename)[1].split('_%04d')[0]
+    else:
+        video_name = os.path.splitext(args.filename)[0]
+    groundtruth_filename = 'annotations/' + video_name + '-up_down.npy'
 
     if os.path.isfile(groundtruth_filename):
         updown_groundtruth = load_updown_groundtruth(groundtruth_filename)
 
-        xleftfoot = axes[0, 0].plot(3000 * updown_groundtruth[0, :], 'o-', markersize=2,
+        axes[0, 0].plot(3000 * updown_groundtruth[0, :], 'o-', markersize=2,
                                     label='ground truth up/down, left foot')
-        yleftfoot = axes[0, 1].plot(750 - 300 * updown_groundtruth[0, :], 'o-', markersize=2,
+        axes[0, 1].plot(750 - 300 * updown_groundtruth[0, :], 'o-', markersize=2,
                                     label='ground truth up/down, left foot')
-        xrightfoot = axes[0, 0].plot(3000 * updown_groundtruth[1, :], 'o-', markersize=2,
+        axes[0, 0].plot(3000 * updown_groundtruth[1, :], 'o-', markersize=2,
                                      label='ground truth up/down, right foot')
-        yrightfoot = axes[0, 1].plot(750 - 300 * updown_groundtruth[1, :], 'o-', markersize=2,
+        axes[0, 1].plot(750 - 300 * updown_groundtruth[1, :], 'o-', markersize=2,
                                      label='ground truth up/down, right foot')
     else:
         print('WARNING: could not find ground truth for foot up/down')
