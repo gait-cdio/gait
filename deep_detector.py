@@ -10,7 +10,7 @@ from torch.autograd import Variable
 import numpy as np
 import torchvision
 
-import test_dl_utils
+import deep_train
 
 
 class ClickRecorder:
@@ -70,7 +70,7 @@ def load_groundtruth(video_filename, patch_size=64, cached=False):
     input_cache_filename = groundtruth_filename + '_input_cache.npy'
     output_cache_filename = groundtruth_filename + '_output_cache.npy'
 
-    if os.path.isfile(input_cache_filename):
+    if cached and os.path.isfile(input_cache_filename):
         print("Found cached groundtruth data!")
         return np.load(input_cache_filename), np.load(output_cache_filename)
 
@@ -79,12 +79,12 @@ def load_groundtruth(video_filename, patch_size=64, cached=False):
     cap = cv2.VideoCapture(video_filename)
     num_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    input_patches = np.zeros(shape=(num_frames * 4, patch_size, patch_size, 3))
-    output_patches = np.zeros(shape=(num_frames * 4, patch_size, patch_size))
-
     left_toe, left_heel = 0, 1
     right_toe, right_heel = 2, 3
     interesting_body_parts = [left_heel, right_heel]
+
+    input_patches = np.zeros(shape=(num_frames * 2 * len(interesting_body_parts), patch_size, patch_size, 3))
+    output_patches = np.zeros(shape=(num_frames * 2 * len(interesting_body_parts), patch_size, patch_size))
 
     sample_index = 0
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
@@ -101,7 +101,7 @@ def load_groundtruth(video_filename, patch_size=64, cached=False):
         xx, yy = np.meshgrid(x, y)
         groundtruth_output = np.zeros(shape=(height, width))
 
-        sigma = 10.0
+        sigma = 0.25
         interesting_positions = position_groundtruth[frame_index][
             np.where(~np.isnan(position_groundtruth[frame_index, interesting_body_parts, 0]))]
 
@@ -110,6 +110,9 @@ def load_groundtruth(video_filename, patch_size=64, cached=False):
         def sample_image(image, x, y):
             return image[y - half_patch_size:y + half_patch_size,
                    x - half_patch_size:x + half_patch_size]
+
+        def clamp(n, smallest, largest):
+            return max(smallest, min(n, largest))
 
         interesting_positions = list(
             filter(lambda a:
@@ -127,40 +130,20 @@ def load_groundtruth(video_filename, patch_size=64, cached=False):
             output_patches[sample_index] = sample_image(groundtruth_output, x, y)
             sample_index += 1
 
+            x2, y2 = x, y - 1.5 * patch_size
+            x2 += patch_size * np.random.randn()
+            y2 += patch_size * np.random.randn()
+            x2 = int(clamp(x2, half_patch_size, width - half_patch_size))
+            y2 = int(clamp(y2, half_patch_size, height - half_patch_size))
+            input_patches[sample_index] = sample_image(image, x2, y2)
+            output_patches[sample_index] = sample_image(groundtruth_output, x2, y2)
+            sample_index += 1
+
     input_patches = input_patches[:sample_index]
     output_patches = output_patches[:sample_index]
     np.save(input_cache_filename, input_patches)
     np.save(output_cache_filename, output_patches)
     return input_patches, output_patches
-
-
-patch_size = 128
-half_patch_size = patch_size // 2
-
-train = True
-
-if train:
-    input_data = {}
-    output_data = {}
-    for person in ['john', 'kevin', 'rolf']:
-        video_filename = "input-images/{}_markerless/{}_markerless_%04d.jpg".format(person, person)
-        print("Loading data for {} ...".format(person))
-        input_data[person], output_data[person] = load_groundtruth(video_filename, patch_size=patch_size, cached=True)
-        print("Loaded data for {}.".format(person))
-
-    training_examples = np.concatenate(list(input_data.values()))
-    training_example_outputs = np.concatenate(list(output_data.values()))
-    np.random.shuffle(training_examples)
-    np.random.shuffle(training_example_outputs)
-
-    foot_dataset = separate_dataset_into_train_val(training_examples, training_example_outputs)
-
-    data_loaders = {x: torch.utils.data.DataLoader(foot_dataset[x], batch_size=50,
-                                                   shuffle=True, num_workers=1)
-                    for x in ['train', 'val']}
-else:
-    person = 'john'
-    video_filename = "input-images/{}_markerless/{}_markerless_%04d.jpg".format(person, person)
 
 
 def run_network(network, x):
@@ -169,33 +152,7 @@ def run_network(network, x):
     return x
 
 
-if train:
-    vgg = torchvision.models.vgg19(pretrained=True)
-    vgg.features = torch.nn.Sequential(*[vgg.features[i] for i in range(4)])
-
-    for params in vgg.parameters():
-        params.require_grad = False
-
-    vgg.classifier = torch.nn.Conv2d(64, 1, kernel_size=3, padding=1)
-
-    if torch.cuda.is_available():
-        vgg = vgg.cuda()
-
-    criterion = torch.nn.MSELoss()
-    optimizer_conv = optim.SGD(vgg.classifier.parameters(), lr=1e-7)
-    num_epochs = 300
-    exp_lr_scheduler = lr_scheduler.ReduceLROnPlateau(optimizer_conv)
-
-    trained_model = test_dl_utils.train_model(vgg, criterion, optimizer_conv, exp_lr_scheduler, data_loaders, run_network,
-                                              num_epochs=num_epochs)
-
-    torch.save(trained_model.state_dict(), "cnnetworks/deeptracker_state_dict")
-    torch.save(trained_model, "cnnetworks/deeptracker")
-else:
-    trained_model = torch.load("cnnetworks/deeptracker")
-
-
-def classify_pixels(image):
+def classify_pixels(trained_model, image):
     out = run_network(trained_model,
                       Variable(torch.from_numpy(image)
                                .permute(2, 0, 1)
@@ -208,52 +165,111 @@ def classify_pixels(image):
 
     return lilpatch
 
-cap = cv2.VideoCapture(video_filename)
 
-for frame in [31, 61, 91]:
-    cap.set(cv2.CAP_PROP_POS_FRAMES, frame)
-    ret, image = cap.read()
+def main():
+    patch_size = 128
+    half_patch_size = patch_size // 2
 
-    assert ret
+    train = True
 
-    display_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    if train:
+        input_data = {}
+        output_data = {}
+        for person in ['john', 'kevin', 'rolf']:
+            video_filename = "input-images/{}_markerless/{}_markerless_%04d.jpg".format(person, person)
+            print("Loading data for {} ...".format(person))
+            input_data[person], output_data[person] = load_groundtruth(video_filename, patch_size=patch_size, cached=False)
+            print("Loaded data for {}.".format(person))
 
-    height, width = image.shape[0:2]
+        training_examples = np.concatenate(list(input_data.values()))
+        training_example_outputs = np.concatenate(list(output_data.values()))
+        np.random.shuffle(training_examples)
+        np.random.shuffle(training_example_outputs)
 
-    fig, ax = plt.subplots()
-    ax.imshow(display_image)
-    ax.set_title('Please select regions to evaluate')
-    click_recorder = ClickRecorder(fig)
-    plt.show()
+        foot_dataset = separate_dataset_into_train_val(training_examples, training_example_outputs)
 
-    maxes = []
-    for index, coords in enumerate(click_recorder.clicks):
-        x, y = int(coords[0]), int(coords[1])
-        col_low, col_high = max(0, x - half_patch_size), min(width, x + half_patch_size)
-        row_low, row_high = max(0, y - half_patch_size), min(height, y + half_patch_size)
+        data_loaders = {x: torch.utils.data.DataLoader(foot_dataset[x], batch_size=50,
+                                                       shuffle=True, num_workers=4)
+                        for x in ['train', 'val']}
+    else:
+        person = 'john'
+        video_filename = "input-images/{}_markerless/{}_markerless_%04d.jpg".format(person, person)
 
-        input_patch = image[row_low:row_high, col_low:col_high]
-        out = run_network(trained_model,
-                          Variable(torch.from_numpy(input_patch)
-                                   .permute(2, 0, 1)
-                                   .unsqueeze(0))
-                          .float()
-                          .cuda())
+    if train:
+        vgg = torchvision.models.vgg19(pretrained=True)
+        vgg.features = torch.nn.Sequential(*[vgg.features[i] for i in range(4)])
 
-        output_patch = out.data.cpu().numpy()[0, 0]
-        lilpatch = output_patch[3:-3, 3:-3]
-        maxrow, maxcol = np.unravel_index(lilpatch.argmax(), lilpatch.shape)
-        maxrow += 3
-        maxcol += 3
-        maxes.append((maxrow + y - half_patch_size, maxcol + x - half_patch_size))
+        for params in vgg.parameters():
+            params.require_grad = False
 
-        clamped = np.fmax(np.zeros(lilpatch.shape), lilpatch)
-        grayscale_patch = np.array(np.stack((clamped,) * 3, axis=-1) * 255 / np.max(clamped), dtype=np.uint8)
+        vgg.classifier = torch.nn.Conv2d(64, 1, kernel_size=3, padding=1)
 
-        alpha = 1
-        display_image[row_low+3:row_high-3, col_low+3:col_high-3] = alpha * grayscale_patch + (1 - alpha) * input_patch[3:-3, 3:-3]
+        if torch.cuda.is_available():
+            vgg = vgg.cuda()
 
-    plt.imshow(display_image)
-    for y, x in maxes:
-        plt.scatter(x, y, c='blue', marker='x', s=24)
-    plt.show()
+        criterion = torch.nn.MSELoss()
+        optimizer_conv = optim.SGD(vgg.classifier.parameters(), lr=1e-7, momentum=0.5)
+        num_epochs = 300
+        exp_lr_scheduler = lr_scheduler.ReduceLROnPlateau(optimizer_conv)
+
+        trained_model = deep_train.train_model(vgg, criterion, optimizer_conv, exp_lr_scheduler, data_loaders, run_network,
+                                               num_epochs=num_epochs)
+
+        torch.save(trained_model.state_dict(), "cnnetworks/deeptracker_state_dict")
+        torch.save(trained_model, "cnnetworks/deeptracker")
+    else:
+        trained_model = torch.load("cnnetworks/deeptracker")
+
+    cap = cv2.VideoCapture(video_filename)
+
+    for frame in [31, 61, 91]:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame)
+        ret, image = cap.read()
+
+        assert ret
+
+        display_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        height, width = image.shape[0:2]
+
+        fig, ax = plt.subplots()
+        ax.imshow(display_image)
+        ax.set_title('Please select regions to evaluate')
+        click_recorder = ClickRecorder(fig)
+        plt.show()
+
+        maxes = []
+        for index, coords in enumerate(click_recorder.clicks):
+            x, y = int(coords[0]), int(coords[1])
+            col_low, col_high = max(0, x - half_patch_size), min(width, x + half_patch_size)
+            row_low, row_high = max(0, y - half_patch_size), min(height, y + half_patch_size)
+
+            input_patch = image[row_low:row_high, col_low:col_high]
+            out = run_network(trained_model,
+                              Variable(torch.from_numpy(input_patch)
+                                       .permute(2, 0, 1)
+                                       .unsqueeze(0))
+                              .float()
+                              .cuda())
+
+            output_patch = out.data.cpu().numpy()[0, 0]
+            lilpatch = output_patch[3:-3, 3:-3]
+            maxrow, maxcol = np.unravel_index(lilpatch.argmax(), lilpatch.shape)
+            maxrow += 3
+            maxcol += 3
+            maxes.append((maxrow + y - half_patch_size, maxcol + x - half_patch_size))
+
+            clamped = np.fmax(np.zeros(lilpatch.shape), lilpatch)
+            grayscale_patch = np.array(np.stack((clamped,) * 3, axis=-1) * 255 / np.max(clamped), dtype=np.uint8)
+
+            alpha = 1
+            display_image[row_low+3:row_high-3, col_low+3:col_high-3] = alpha * grayscale_patch + (1 - alpha) * input_patch[3:-3, 3:-3]
+
+        plt.imshow(display_image)
+        for y, x in maxes:
+            plt.scatter(x, y, c='blue', marker='x', s=24)
+        plt.show()
+
+
+if __name__ == '__main__':
+    main()
