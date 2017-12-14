@@ -1,0 +1,10 @@
+marker:
+  4farger:
+    Error per correctly detected frame: 0.05845511482254697
+    False detections per frame: 0.06491228070175438
+    Missed detections per frame: 0.05789473684210526
+markerless:
+  4farger:
+    Error per correctly detected frame: 0.07421875
+    False detections per frame: 0.07719298245614035
+    Missed detections per frame: 0.0
