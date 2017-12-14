@@ -17,9 +17,10 @@ def visualize_gait(updown_estimations, args):
 
     if os.path.isfile(groundtruth_filename):
         updown_groundtruth = load_updown_groundtruth(groundtruth_filename)
+        num_groundtruth_tracks = updown_groundtruth.shape[0]
+    else:
+        num_groundtruth_tracks = 0
 
-
-    num_groundtruth_tracks = updown_groundtruth.shape[0]
     num_estimated_tracks = len(updown_estimations)
     errors = np.zeros((num_groundtruth_tracks, num_estimated_tracks))
     # If we have ground truth, sort both lists according to which match the best before visualizing
