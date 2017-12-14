@@ -1,0 +1,50 @@
+marker:
+  4farger:
+    Error per correctly detected frame: 0.05845511482254697
+    False detections per frame: 0.06491228070175438
+    Missed detections per frame: 0.05789473684210526
+  4fargersilly:
+    Error per correctly detected frame: 0.09905660377358491
+    False detections per frame: 0.03463203463203463
+    Missed detections per frame: 0.0
+  4markersjohn1:
+    Error per correctly detected frame: 0.0446927374301676
+    False detections per frame: 0.04391891891891892
+    Missed detections per frame: 0.0
+  4markersjohn3:
+    Error per correctly detected frame: 0.06640625
+    False detections per frame: 0.009433962264150943
+    Missed detections per frame: 0.04245283018867924
+  4markerskevin2:
+    Error per correctly detected frame: 0.06310679611650485
+    False detections per frame: 0.028795811518324606
+    Missed detections per frame: 0.005235602094240838
+markerless:
+  4farger:
+    Error per correctly detected frame: 0.07421875
+    False detections per frame: 0.07719298245614035
+    Missed detections per frame: 0.0
+  4fargersilly:
+    Error per correctly detected frame: 0.12264150943396226
+    False detections per frame: 0.08225108225108226
+    Missed detections per frame: 0.0
+  4markersjohn1:
+    Error per correctly detected frame: 0.0847457627118644
+    False detections per frame: 0.11148648648648649
+    Missed detections per frame: 0.006756756756756757
+  4markersjohn3:
+    Error per correctly detected frame: 0.06319702602230483
+    False detections per frame: 0.04716981132075472
+    Missed detections per frame: 0.01179245283018868
+  4markerskevin2:
+    Error per correctly detected frame: 0.12359550561797752
+    False detections per frame: 0.010471204188481676
+    Missed detections per frame: 0.07853403141361257
+  john_markerless:
+    Error per correctly detected frame: 0.06918238993710692
+    False detections per frame: 0.03361344537815126
+    Missed detections per frame: 0.07142857142857142
+  rolf_markerless:
+    Error per correctly detected frame: 0.08974358974358974
+    False detections per frame: 0.04954954954954955
+    Missed detections per frame: 0.04054054054054054

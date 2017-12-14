@@ -12,7 +12,7 @@ import visualize_gait
 from startmenu import start_menu
 import subprocess as sp
 from openpose_parser import load_ankles_allframes
-from footleftright import left_foot_right_foot
+from footleftright import left_foot_right_foot, left_foot_right_foot_openpose
 from utils import load_updown_groundtruth
 import validator
 
@@ -58,8 +58,10 @@ def gait_analysis(args, visualize = False):
                                                                                   time_weight=1),
                                            similarity_threshold=140)
 
-
-    dir_and_foot_pairs = left_foot_right_foot(tracks)
+    if args.method == 'markerless':
+        dir_and_foot_pairs = left_foot_right_foot_openpose(tracks)
+    else:
+        dir_and_foot_pairs = left_foot_right_foot(tracks)
 
     # +----------------------------------------------------------------------------+
     # |                  Generate foot down/up, get derivatives                    |

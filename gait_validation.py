@@ -56,12 +56,19 @@ def gait_validation(args):
 
 if __name__ == "__main__":
     if True:
+        openpose = {'markerless': 'openpose'}
+        markers2 = {'marker': {'num_of_trackers': 2}, 'markerless': 'openpose'}
+        markers4 = {'marker': {'num_of_trackers': 4}, 'markerless': 'openpose'}
         evaluations_files = {
-            'input-videos/4farger.mp4': {'marker': {'num_of_trackers': 4}, 'markerless': 'openpose'},
-            # 'input-videos/4fargersilly.mp4': {'marker': {'num_of_trackers': 4}, 'markerless': 'openpose'},
-            # 'input-images/john_markerless/john_markerless_%04d.jpg': {'markerless': 'openpose'},
-            # 'input-images/rolf_markerless/rolf_markerless_%04d.jpg': {'markerless': 'openpose'},
-            # 'input-images/kevin_markerless/kevin_markerless_%04d.jpg': {'markerless': 'openpose'},
+            'input-videos/4farger.mp4': markers4,
+            'input-videos/4fargersilly.mp4': markers4,
+            # 'input-videos/4markerskevin1.mp4': markers2,
+            'input-videos/4markerskevin2.mp4': markers2,
+            'input-videos/4markersjohn1.mp4': markers2,
+            'input-videos/4markersjohn3.mp4': markers2,
+            'input-images/john_markerless/john_markerless_%04d.jpg': openpose,
+            'input-images/rolf_markerless/rolf_markerless_%04d.jpg': openpose,
+            #'input-images/kevin_markerless/kevin_markerless_%04d.jpg': openpose,
         }
 
         with open('validation-files.yaml', 'w') as f:
