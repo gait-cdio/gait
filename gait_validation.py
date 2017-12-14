@@ -57,11 +57,11 @@ def gait_validation(args):
 if __name__ == "__main__":
     if True:
         evaluations_files = {
-             'input-videos/4farger.mp4': {'marker': {'num_of_trackers': 4}, 'markerless': 'openpose'},
-             'input-videos/4fargersilly.mp4': {'marker': {'num_of_trackers': 4}, 'markerless': 'openpose'}
-            #'input-images/john_markerless/john_markerless_%04d.jpg': {'markerless': 'openpose'},
-            #'input-images/rolf_markerless/rolf_markerless_%04d.jpg': ['markerless'],
-            #'input-images/kevin_markerless/kevin_markerless_%04d.jpg': ['markerless']
+            # 'input-videos/4farger.mp4': {'marker': {'num_of_trackers': 4}, 'markerless': 'openpose'},
+            'input-videos/4fargersilly.mp4': {'marker': {'num_of_trackers': 4}, 'markerless': 'openpose'},
+            # 'input-images/john_markerless/john_markerless_%04d.jpg': {'markerless': 'openpose'},
+            # 'input-images/rolf_markerless/rolf_markerless_%04d.jpg': {'markerless': 'openpose'},
+            # 'input-images/kevin_markerless/kevin_markerless_%04d.jpg': {'markerless': 'openpose'},
         }
 
         with open('validation-files.yaml', 'w') as f:
