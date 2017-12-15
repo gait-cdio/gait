@@ -5,8 +5,8 @@ import numpy as np
 def validate(ground_truth, estimation):
     diff = np.abs(ground_truth - estimation)
     diff_sum = np.nansum(diff)
-    weight = np.sum(~np.isnan(diff))
-    error_per_ok_frame=float(diff_sum/weight)
+    weight = diff.size
+    error_per_frame=float(diff_sum/weight)
 
     no_annotation = np.isnan(ground_truth)
     no_estimation = np.isnan(estimation)
@@ -15,9 +15,10 @@ def validate(ground_truth, estimation):
     false_detection_per_frame = float(false_detections/diff.size)
     missed_detection_per_frame = float(missed_detections/diff.size)
     return {
-        'Error per correctly detected frame': error_per_ok_frame,
+        'Up/down misclassifications per frame': error_per_frame,
         'False detections per frame': false_detection_per_frame,
         'Missed detections per frame': missed_detection_per_frame,
+        'Total Error': error_per_frame + false_detection_per_frame + missed_detection_per_frame,
         'Mean error per up/down transition': float(mean_frames_error(estimation=estimation, groundtruth=ground_truth)),
     }
 

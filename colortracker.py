@@ -19,7 +19,7 @@ def variance_greater_than(threshold):
 
 
 class ColorTracker:
-    def __init__(self, median_filter=True):
+    def __init__(self, median_filter=True, output_to_video=False, output_frame=None, fps=None, width=None, height=None, video_name=None):
         self.blob_params = cv2.SimpleBlobDetector_Params()
         self.blob_params.minThreshold = 10
         self.blob_params.maxThreshold = 180
@@ -54,7 +54,18 @@ class ColorTracker:
 
         self.variance_threshold = 20 ** 2
 
-    def detect(self, img, frame_nr, visualize = True):
+        self.output_to_video = output_to_video
+        self.video_name = video_name
+        self.output_frame = output_frame
+        self.writers = {}
+        if output_to_video:
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')
+            self.writers['thresholded'] = cv2.VideoWriter('output-videos/' + video_name + '-thresholded.avi', fourcc, fps, (width, height))
+            self.writers['blurred_thresholded'] = cv2.VideoWriter('output-videos/' + video_name + '-blurred-thresholded.avi', fourcc, fps, (width, height))
+            self.writers['circles_blurred_thresholded'] = cv2.VideoWriter('output-videos/' + video_name + '-circles-blurred-thresholded.avi', fourcc, fps, (width, height))
+            self.writers['circles_on_image'] = cv2.VideoWriter('output-videos/' + video_name + '-circles-on-image.avi', fourcc, fps, (width, height))
+
+    def detect(self, img, frame_nr, visualize=True):
 
         self.visualize_keypoints = visualize
 
@@ -67,11 +78,38 @@ class ColorTracker:
         mask = cv2.inRange(hsv, self.hsv_min, self.hsv_max)
 
         masked_img = cv2.bitwise_and(img, img, mask=mask)
+
         blurred_masked = cv2.GaussianBlur(masked_img,
                                           self.gaussian_kernel_size,
                                           self.gaussian_kernel_sigma)
 
         keypoints = self.detector.detect(blurred_masked)
+
+        if self.output_to_video:
+            self.writers['thresholded'].write(masked_img)
+            self.writers['blurred_thresholded'].write(blurred_masked)
+
+            circles_blurred_thresholded = cv2.drawKeypoints(blurred_masked,
+                                                            keypoints,
+                                                            np.array([]),
+                                                            (0, 255, 0),
+                                                            cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+            self.writers['circles_blurred_thresholded'].write(circles_blurred_thresholded)
+            circles_on_image = cv2.drawKeypoints(img,
+                                                 keypoints,
+                                                 np.array([]),
+                                                 (0, 255, 0),
+                                                 cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+            self.writers['circles_on_image'].write(circles_on_image)
+
+            if frame_nr == self.output_frame:
+                def crop(im):
+                    return im[200:, 400:1201]
+
+                cv2.imwrite('output-images/' + self.video_name + '-input.png', crop(img))
+                cv2.imwrite('output-images/' + self.video_name + '-blurred-thresholded.png', crop(blurred_masked))
+                cv2.imwrite('output-images/' + self.video_name + '-circles-blurred-thresholded.png', crop(circles_blurred_thresholded))
+                cv2.imwrite('output-images/' + self.video_name + '-circles-on-image.png', crop(circles_on_image))
 
         if self.visualize_keypoints:
             visualize_detections(img, keypoints)
@@ -119,9 +157,12 @@ def feature_distance(distance_weight=1, size_weight=0, hue_weight=0, time_weight
     return closure
 
 
-def detect(filename, number_of_trackers=1, visualize=False, set_thresholds=True):
+def detect(filename, number_of_trackers=1, output_to_video=False, output_frame=None, set_thresholds=True):
     cap = cv2.VideoCapture(filename)
     number_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
 
     # +-----------------------------------------------------------------------+
     # |                         Initialize trackers                           |
@@ -155,7 +196,9 @@ def detect(filename, number_of_trackers=1, visualize=False, set_thresholds=True)
             with open(threshold_file, 'wb') as f:
                 pickle.dump(thresholds, f)
 
-        keypoint_tracker = ColorTracker()
+        keypoint_tracker = ColorTracker(output_to_video=(output_to_video and (i == 0)),
+                                        output_frame=output_frame,
+                                        fps=fps, width=width, height=height, video_name=os.path.splitext(os.path.split(filename)[1])[0])
         keypoint_tracker.hsv_min, keypoint_tracker.hsv_max = thresholds
         trackerList.append(TrackerWithDetections(tracker=keypoint_tracker, detections=[]))
 
@@ -186,6 +229,11 @@ def detect(filename, number_of_trackers=1, visualize=False, set_thresholds=True)
                 paused = not paused
             elif pressed_key == ord('q'):
                 break
+
+    cap.release()
+    for tracker in trackerList:
+        for writer in tracker.tracker.writers.values():
+            writer.release()
 
     # +-----------------------------------------------------------------------+
     # |                         Handle missing frames                         |

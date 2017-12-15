@@ -1,0 +1,14 @@
+input-images/john_markerless/john_markerless_%04d.jpg: &id001
+  markerless: openpose
+input-images/rolf_markerless/rolf_markerless_%04d.jpg: *id001
+input-videos/4farger.mp4: &id002
+  marker:
+    num_of_trackers: 4
+  markerless: openpose
+input-videos/4fargersilly.mp4: *id002
+input-videos/4markersjohn1.mp4: &id003
+  marker:
+    num_of_trackers: 2
+  markerless: openpose
+input-videos/4markersjohn3.mp4: *id003
+input-videos/4markerskevin2.mp4: *id003

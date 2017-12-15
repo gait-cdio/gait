@@ -1,54 +1,62 @@
 marker:
   4farger:
-    Error per correctly detected frame: 0.05845511482254697
     False detections per frame: 0.06491228070175438
+    Mean error per up/down transition: 2.3529411764705883
     Missed detections per frame: 0.05789473684210526
+    Up/down misclassifications per frame: 0.04912280701754386
   4fargersilly:
-    Error per correctly detected frame: 0.09905660377358491
     False detections per frame: 0.03463203463203463
+    Mean error per up/down transition: 3.230769230769231
     Missed detections per frame: 0.0
+    Up/down misclassifications per frame: 0.09090909090909091
   4markersjohn1:
-    Error per correctly detected frame: 0.0446927374301676
     False detections per frame: 0.04391891891891892
+    Mean error per up/down transition: 0.8
     Missed detections per frame: 0.0
+    Up/down misclassifications per frame: 0.02702702702702703
   4markersjohn3:
-    Error per correctly detected frame: 0.06692913385826772
     False detections per frame: 0.009433962264150943
-    Missed detections per frame: 0.04716981132075472
+    Mean error per up/down transition: 3.7142857142857144
+    Missed detections per frame: 0.04245283018867924
+    Up/down misclassifications per frame: 0.04009433962264151
   4markerskevin2:
-    Error per correctly detected frame: 0.06310679611650485
     False detections per frame: 0.028795811518324606
+    Mean error per up/down transition: 1.0833333333333333
     Missed detections per frame: 0.005235602094240838
+    Up/down misclassifications per frame: 0.034031413612565446
 markerless:
   4farger:
-    Error per correctly detected frame: 0.07421875
     False detections per frame: 0.07719298245614035
+    Mean error per up/down transition: 3.0555555555555554
     Missed detections per frame: 0.0
+    Up/down misclassifications per frame: 0.06666666666666667
   4fargersilly:
-    Error per correctly detected frame: 0.3891509433962264
     False detections per frame: 0.08225108225108226
+    Mean error per up/down transition: 5.533333333333333
     Missed detections per frame: 0.0
+    Up/down misclassifications per frame: 0.11255411255411256
   4markersjohn1:
-    Error per correctly detected frame: 0.0847457627118644
     False detections per frame: 0.11148648648648649
+    Mean error per up/down transition: 6.230769230769231
     Missed detections per frame: 0.006756756756756757
+    Up/down misclassifications per frame: 0.05067567567567568
   4markersjohn3:
-    Error per correctly detected frame: 0.8444444444444444
-    False detections per frame: 0.04481132075471698
-    Missed detections per frame: 0.009433962264150943
+    False detections per frame: 0.04716981132075472
+    Mean error per up/down transition: 3.2142857142857144
+    Missed detections per frame: 0.01179245283018868
+    Up/down misclassifications per frame: 0.04009433962264151
   4markerskevin2:
-    Error per correctly detected frame: 0.810126582278481
-    False detections per frame: 0.06282722513089005
-    Missed detections per frame: 0.13089005235602094
+    False detections per frame: 0.010471204188481676
+    Mean error per up/down transition: 7.166666666666667
+    Missed detections per frame: 0.07853403141361257
+    Up/down misclassifications per frame: 0.05759162303664921
   john_markerless:
-    Error per correctly detected frame: 0.06918238993710692
     False detections per frame: 0.03361344537815126
+    Mean error per up/down transition: 4.9
     Missed detections per frame: 0.07142857142857142
-  kevin_markerless:
-    Error per correctly detected frame: 0.47093023255813954
-    False detections per frame: 0.03333333333333333
-    Missed detections per frame: 0.043333333333333335
+    Up/down misclassifications per frame: 0.046218487394957986
   rolf_markerless:
-    Error per correctly detected frame: 0.461038961038961
-    False detections per frame: 0.04504504504504504
-    Missed detections per frame: 0.04954954954954955
+    False detections per frame: 0.04954954954954955
+    Mean error per up/down transition: 4.6
+    Missed detections per frame: 0.04054054054054054
+    Up/down misclassifications per frame: 0.06306306306306306

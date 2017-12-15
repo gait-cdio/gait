@@ -4,8 +4,8 @@ import os
 
 import utils
 
-filename = 'kevin_markerless/kevin_markerless_%04d.jpg'
-# filename = '4fargersilly.mp4'
+# filename = 'kevin_markerless/kevin_markerless_%04d.jpg'
+filename = '4markersjohn1.mp4'
 
 if '%04d' in filename:
     video_name = os.path.split(filename)[1].split('_%04d')[0]

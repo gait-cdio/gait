@@ -1,6 +1,9 @@
 <component name="ProjectDictionaryState">
   <dictionary name="cleese">
     <words>
+      <w>dataset</w>
+      <w>grayscale</w>
+      <w>groundtruth</w>
       <w>kalman</w>
       <w>keypoint</w>
       <w>priori</w>
