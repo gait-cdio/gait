@@ -1,5 +1,6 @@
 import yaml
 import numpy as np
+import math
 
 
 def write_gait_parameters_to_file(filename, updown_estimations, fps):
@@ -37,17 +38,30 @@ def duty_stance_swing(updown_with_nans, fps):
     n_up_frames = sum(clean_updown == 0)
     n_down_frames = sum(clean_updown == 1)
 
-    # Count the mean number of frames the foot is up/down per step
-    mean_frames_per_up = n_up_frames / n_up
-    mean_frames_per_down = n_down_frames / n_down
+    try:
+        # Count the mean number of frames the foot is up/down per step
+        mean_frames_per_up = n_up_frames / n_up
+        mean_frames_per_down = n_down_frames / n_down
 
-    # Calculate the duty cycle = time_foot_is_down / total_time
-    duty_cycle = mean_frames_per_down / (mean_frames_per_down + mean_frames_per_up)
+        # Calculate the duty cycle = time_foot_is_down / total_time
+        duty_cycle = mean_frames_per_down / (mean_frames_per_down + mean_frames_per_up)
+        duty_cycle = float(duty_cycle)
+        if math.isnan(duty_cycle):
+            duty_cycle = 'Too few steps to confidently calculate duty cycle'
+    except ZeroDivisionError:
+        duty_cycle = 'Too few steps to confidently calculate duty cycle'
 
-    # Calculate mean stance duration
-    stance_duration = float(n_down_frames) / float((n_down) * fps)
+    try:
+        # Calculate mean stance duration
+        stance_duration = float(n_down_frames) / float((n_down) * fps)
+        stance_duration = float(stance_duration)
+    except ZeroDivisionError:
+        stance_duration = 'Too few steps to confidently calculate stance duration'
+    try:
+        # Calculate mean swing duration
+        swing_duration = float(n_up_frames) / float((n_up) * fps)
+        swing_duration = float(swing_duration)
+    except ZeroDivisionError:
+        swing_duration = 'Too few steps to confidently calculate swing duration'
 
-    # Calculate mean swing duration
-    swing_duration = float(n_up_frames) / float((n_up) * fps)
-
-    return float(duty_cycle), float(stance_duration), float(swing_duration)
+    return duty_cycle, stance_duration, swing_duration

@@ -170,6 +170,16 @@ def left_foot_right_foot(track_input):
         'right_foot': right_foot
     }
 
+def left_foot_right_foot_openpose(track_input):
+    # Open will have left foot first and possibly no back foot occlusions
+    tracks, _ = track_fill(track_input)
+    dir = general_direction(tracks)
+    return {
+        'movement_direction': dir,
+        'left_foot': {'foot': 0},
+        'right_foot': {'foot': 1}
+    }
+
 
 if __name__ == '__main__':
     with open("TrackerResults/4farger.mp4.tracks.pkl", 'rb') as f:
