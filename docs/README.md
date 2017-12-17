@@ -13,7 +13,7 @@ Following dependencies must be installed:
 * [OpenCV](https://startbootstrap.com/template-overviews/modern-business/)
 * [OpenPose](https://startbootstrap.com/template-overviews/modern-business/)
 
-##Usage
+## Usage
 Detailed description of how to use the tool can be found in the user manual.
 
 ## Bugs and Issues
