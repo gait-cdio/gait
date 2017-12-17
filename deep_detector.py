@@ -83,6 +83,8 @@ def load_groundtruth(video_filename, patch_size=64, cached=False):
     right_toe, right_heel = 2, 3
     interesting_body_parts = [left_heel, right_heel]
 
+    half_patch_size = patch_size // 2
+
     input_patches = np.zeros(shape=(num_frames * 2 * len(interesting_body_parts), patch_size, patch_size, 3))
     output_patches = np.zeros(shape=(num_frames * 2 * len(interesting_body_parts), patch_size, patch_size))
 
@@ -101,11 +103,9 @@ def load_groundtruth(video_filename, patch_size=64, cached=False):
         xx, yy = np.meshgrid(x, y)
         groundtruth_output = np.zeros(shape=(height, width))
 
-        sigma = 0.25
-        interesting_positions = position_groundtruth[frame_index][
-            np.where(~np.isnan(position_groundtruth[frame_index, interesting_body_parts, 0]))]
+        sigma = 2
 
-        half_patch_size = patch_size // 2
+        interesting_positions = position_groundtruth[frame_index, interesting_body_parts][~np.isnan(position_groundtruth[frame_index, interesting_body_parts, 0])]
 
         def sample_image(image, x, y):
             return image[y - half_patch_size:y + half_patch_size,
@@ -167,10 +167,10 @@ def classify_pixels(trained_model, image):
 
 
 def main():
-    patch_size = 128
+    patch_size = 220
     half_patch_size = patch_size // 2
 
-    train = True
+    train = False
 
     if train:
         input_data = {}
@@ -183,16 +183,18 @@ def main():
 
         training_examples = np.concatenate(list(input_data.values()))
         training_example_outputs = np.concatenate(list(output_data.values()))
-        np.random.shuffle(training_examples)
-        np.random.shuffle(training_example_outputs)
 
-        foot_dataset = separate_dataset_into_train_val(training_examples, training_example_outputs)
+        permutation_indices = np.random.permutation(len(training_example_outputs))
+        shuffled_training_examples = training_examples[permutation_indices]
+        shuffled_training_example_outputs = training_example_outputs[permutation_indices]
+
+        foot_dataset = separate_dataset_into_train_val(shuffled_training_examples, shuffled_training_example_outputs)
 
         data_loaders = {x: torch.utils.data.DataLoader(foot_dataset[x], batch_size=50,
                                                        shuffle=True, num_workers=4)
                         for x in ['train', 'val']}
     else:
-        person = 'john'
+        person = 'kevin'
         video_filename = "input-images/{}_markerless/{}_markerless_%04d.jpg".format(person, person)
 
     if train:
@@ -209,7 +211,7 @@ def main():
 
         criterion = torch.nn.MSELoss()
         optimizer_conv = optim.SGD(vgg.classifier.parameters(), lr=1e-7, momentum=0.5)
-        num_epochs = 300
+        num_epochs = 100
         exp_lr_scheduler = lr_scheduler.ReduceLROnPlateau(optimizer_conv)
 
         trained_model = deep_train.train_model(vgg, criterion, optimizer_conv, exp_lr_scheduler, data_loaders, run_network,
@@ -221,8 +223,20 @@ def main():
         trained_model = torch.load("cnnetworks/deeptracker")
 
     cap = cv2.VideoCapture(video_filename)
+    cv2.namedWindow("Tracking", cv2.WINDOW_AUTOSIZE)
+    tracking = True
+    if tracking:
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        writer = cv2.VideoWriter('output-videos/deeptracker' + person +  '.avi', fourcc, fps, (width, height))
+        frameList = range(20,150)
+    else:
+        frameList = [31,41,51]
 
-    for frame in [31, 61, 91]:
+    prevMax = [patch_size, 870]
+    for frame in frameList:
         cap.set(cv2.CAP_PROP_POS_FRAMES, frame)
         ret, image = cap.read()
 
@@ -232,15 +246,28 @@ def main():
 
         height, width = image.shape[0:2]
 
-        fig, ax = plt.subplots()
-        ax.imshow(display_image)
-        ax.set_title('Please select regions to evaluate')
-        click_recorder = ClickRecorder(fig)
-        plt.show()
+        if tracking:
+            fig, ax = plt.subplots()
+            click_recorder = ClickRecorder(fig)
+            plt.close()
+            click_recorder.clicks = [1]
+        else:
+            fig, ax = plt.subplots()
+            ax.imshow(display_image)
+            ax.set_title('Please select regions to evaluate')
+            click_recorder = ClickRecorder(fig)
+            plt.show()
+
 
         maxes = []
-        for index, coords in enumerate(click_recorder.clicks):
-            x, y = int(coords[0]), int(coords[1])
+        for coords in enumerate(click_recorder.clicks):
+
+
+            if tracking:
+                x, y = int(prevMax[0]), int(prevMax[1])
+            else:
+                x, y = int(coords[0]), int(coords[1])
+
             col_low, col_high = max(0, x - half_patch_size), min(width, x + half_patch_size)
             row_low, row_high = max(0, y - half_patch_size), min(height, y + half_patch_size)
 
@@ -254,22 +281,41 @@ def main():
 
             output_patch = out.data.cpu().numpy()[0, 0]
             lilpatch = output_patch[3:-3, 3:-3]
-            maxrow, maxcol = np.unravel_index(lilpatch.argmax(), lilpatch.shape)
+
+            temp = np.zeros(lilpatch.shape)
+            for tempx in range(lilpatch.shape[0]):
+                for tempy in range(lilpatch.shape[1]):
+                    temp[tempx, tempy] = np.sqrt((tempx - lilpatch.shape[0] / 2) ** 2 + (tempy - lilpatch.shape[1]/ 2) ** 2)
+            distanceMask = np.cos(np.multiply(temp, np.pi / (np.max(temp) * 2)))
+            lilpatch_masked = np.multiply(lilpatch, distanceMask)
+
+            maxrow, maxcol = np.unravel_index(lilpatch_masked.argmax(), lilpatch_masked.shape)
             maxrow += 3
             maxcol += 3
             maxes.append((maxrow + y - half_patch_size, maxcol + x - half_patch_size))
 
-            clamped = np.fmax(np.zeros(lilpatch.shape), lilpatch)
+            prevMax = [maxcol + x - half_patch_size, maxrow + y - half_patch_size]
+
+            clamped = np.fmax(np.zeros(lilpatch_masked.shape), lilpatch_masked)
             grayscale_patch = np.array(np.stack((clamped,) * 3, axis=-1) * 255 / np.max(clamped), dtype=np.uint8)
 
             alpha = 1
             display_image[row_low+3:row_high-3, col_low+3:col_high-3] = alpha * grayscale_patch + (1 - alpha) * input_patch[3:-3, 3:-3]
 
-        plt.imshow(display_image)
-        for y, x in maxes:
-            plt.scatter(x, y, c='blue', marker='x', s=24)
-        plt.show()
+        display_image = cv2.cvtColor(display_image, cv2.COLOR_RGB2BGR)
 
+        if not tracking:
+            for y, x in maxes:
+                plt.scatter(x, y, c='blue', marker='x', s=24)
+        else:
+            for y, x in maxes:
+                cv2.circle(display_image, (x,y), 5, (0,255,0), thickness=-1)
+        cv2.waitKey(1)
+        cv2.imshow("Tracking", display_image)
+        if tracking:
+            writer.write(display_image)
+    writer.release()
+    cap.release()
 
 if __name__ == '__main__':
     main()
