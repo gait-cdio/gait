@@ -163,7 +163,7 @@ def detect(filename, number_of_trackers=1, output_to_video=False, output_frame=N
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = cap.get(cv2.CAP_PROP_FPS)
-
+    visualize = False
     # +-----------------------------------------------------------------------+
     # |                         Initialize trackers                           |
     # +-----------------------------------------------------------------------+
